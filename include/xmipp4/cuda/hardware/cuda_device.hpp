@@ -34,8 +34,8 @@ public:
 	void get_memory_resources(std::vector<memory_resource*> &resources) override;
 
 	XMIPP4_CUDA_API
-	std::shared_ptr<device_queue>
-	create_device_queue() override;
+	std::shared_ptr<device_executor>
+	create_executor() override;
 
 	XMIPP4_CUDA_API
 	std::shared_ptr<device_event> create_device_event() override;

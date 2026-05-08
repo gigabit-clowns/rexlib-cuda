@@ -9,7 +9,7 @@ namespace xmipp4
 namespace hardware
 {
 
-class cuda_device_queue;
+class cuda_device_executor;
 class cuda_buffer;
 
 class cuda_memory_transfer
@@ -23,7 +23,7 @@ public:
 		const buffer &source, 
 		buffer &destination,
 		span<const copy_region> regions, 
-		device_queue *queue
+		device_executor *queue
 	) const override;
 
 	virtual const void* get_source_pointer(const buffer &source) const = 0;

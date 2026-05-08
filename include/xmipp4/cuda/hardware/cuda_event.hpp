@@ -14,8 +14,8 @@ namespace xmipp4
 namespace hardware
 {
 
-class device_queue;
-class cuda_device_queue;
+class device_executor;
+class cuda_device_executor;
 
 
 
@@ -48,19 +48,19 @@ public:
 	handle get_handle() noexcept;
 
 	XMIPP4_CUDA_API
-	void signal(device_queue &queue) override;
+	void signal(device_executor &queue) override;
 
 	XMIPP4_CUDA_API
-	void signal(cuda_device_queue &queue);
+	void signal(cuda_device_executor &queue);
 
 	XMIPP4_CUDA_API
 	void wait() const override;
 
 	XMIPP4_CUDA_API
-	void wait(device_queue &queue) const override;
+	void wait(device_executor &queue) const override;
 	
 	XMIPP4_CUDA_API
-	void wait(cuda_device_queue &queue) const;
+	void wait(cuda_device_executor &queue) const;
 
 	XMIPP4_CUDA_API
 	bool is_signaled() const override;

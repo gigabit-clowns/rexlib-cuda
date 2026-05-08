@@ -2,7 +2,7 @@
 
 #include "cuda_device_to_device_memory_transfer.hpp"
 
-#include <xmipp4/cuda/hardware/cuda_device_queue.hpp>
+#include <xmipp4/cuda/hardware/cuda_device_executor.hpp>
 #include <xmipp4/cuda/hardware/cuda_buffer.hpp>
 #include <xmipp4/core/hardware/buffer.hpp>
 #include <xmipp4/core/hardware/copy_region.hpp>
