@@ -31,19 +31,12 @@ int cuda_device::get_index() const noexcept
 	return m_device_index;
 }
 
-memory_resource& 
-cuda_device::get_memory_resource(memory_resource_affinity affinity)
+void cuda_device::get_memory_resources(std::vector<memory_resource*> &resources)
 {
-	switch (affinity)
-	{
-	case memory_resource_affinity::device:
-		XMIPP4_ASSERT( m_device_local_memory_resource );
-		return *m_device_local_memory_resource;
-	case memory_resource_affinity::host:
-		return cuda_host_pinned_memory_resource::get();
-	default:
-		throw std::invalid_argument("Unknown memory resource affinity");
-	}
+	resources = { 
+		m_device_local_memory_resource.get(), 
+		&cuda_host_pinned_memory_resource::get()
+	};
 }
 
 std::shared_ptr<device_queue> cuda_device::create_device_queue()

@@ -31,8 +31,7 @@ public:
 	int get_index() const noexcept;
 
 	XMIPP4_CUDA_API
-	memory_resource& 
-	get_memory_resource(memory_resource_affinity affinity) override;
+	void get_memory_resources(std::vector<memory_resource*> &resources) override;
 
 	XMIPP4_CUDA_API
 	std::shared_ptr<device_queue>
