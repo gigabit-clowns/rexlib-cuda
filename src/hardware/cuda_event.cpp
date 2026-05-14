@@ -3,7 +3,7 @@
 #include <xmipp4/cuda/hardware/cuda_event.hpp>
 
 #include <xmipp4/cuda/hardware/cuda_error.hpp>
-#include <xmipp4/cuda/hardware/cuda_device_executor.hpp>
+#include <xmipp4/cuda/hardware/cuda_device_queue.hpp>
 
 #include <utility>
 
@@ -56,12 +56,12 @@ cuda_event::handle cuda_event::get_handle() noexcept
 
 
 
-void cuda_event::signal(device_executor &queue)
+void cuda_event::signal(device_queue &queue)
 {
-	signal(dynamic_cast<cuda_device_executor&>(queue));
+	signal(dynamic_cast<cuda_device_queue&>(queue));
 }
 
-void cuda_event::signal(cuda_device_executor &queue)
+void cuda_event::signal(cuda_device_queue &queue)
 {
 	XMIPP4_CUDA_CHECK( cudaEventRecord(m_event, queue.get_handle()) );
 }
@@ -71,12 +71,12 @@ void cuda_event::wait() const
 	XMIPP4_CUDA_CHECK( cudaEventSynchronize(m_event) );
 }
 
-void cuda_event::wait(device_executor &queue) const
+void cuda_event::wait(device_queue &queue) const
 {
-	wait(dynamic_cast<cuda_device_executor&>(queue));
+	wait(dynamic_cast<cuda_device_queue&>(queue));
 }
 
-void cuda_event::wait(cuda_device_executor &queue) const
+void cuda_event::wait(cuda_device_queue &queue) const
 {
 	XMIPP4_CUDA_CHECK(
 		cudaStreamWaitEvent(queue.get_handle(), m_event, cudaEventWaitDefault)

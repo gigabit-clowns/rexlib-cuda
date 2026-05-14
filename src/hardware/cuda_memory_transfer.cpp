@@ -2,7 +2,7 @@
 
 #include "cuda_memory_transfer.hpp"
 
-#include <xmipp4/cuda/hardware/cuda_device_executor.hpp>
+#include <xmipp4/cuda/hardware/cuda_device_queue.hpp>
 #include <xmipp4/cuda/hardware/cuda_buffer.hpp>
 #include <xmipp4/core/hardware/buffer.hpp>
 #include <xmipp4/core/hardware/copy_region.hpp>
@@ -59,11 +59,11 @@ void cuda_memory_transfer::copy(
 	const buffer &source, 
 	buffer &destination,
 	span<const copy_region> regions, 
-	device_executor *queue
+	device_queue *queue
 ) const
 {
 	cudaStream_t stream_handle = nullptr;
-	auto *cuda_queue = dynamic_cast<cuda_device_executor*>(queue);
+	auto *cuda_queue = dynamic_cast<cuda_device_queue*>(queue);
 	if (cuda_queue)
 	{
 		stream_handle = cuda_queue->get_handle();
@@ -71,7 +71,7 @@ void cuda_memory_transfer::copy(
 	else if (queue)
 	{
 		XMIPP4_LOG_WARN(
-			"Provided device_executor is not a cuda_device_executor. "
+			"Provided device_queue is not a cuda_device_queue. "
 			"Falling back to synchronous copy."
 		);
 		queue->wait_until_completed(); 

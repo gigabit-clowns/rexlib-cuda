@@ -2,7 +2,7 @@
 
 #include <xmipp4/cuda/hardware/cuda_device.hpp>
 
-#include <xmipp4/cuda/hardware/cuda_device_executor.hpp>
+#include <xmipp4/cuda/hardware/cuda_device_queue.hpp>
 #include <xmipp4/cuda/hardware/cuda_event.hpp>
 
 #include <xmipp4/core/platform/assert.hpp>
@@ -39,9 +39,9 @@ void cuda_device::get_memory_resources(std::vector<memory_resource*> &resources)
 	};
 }
 
-std::shared_ptr<device_executor> cuda_device::create_executor()
+std::shared_ptr<device_queue> cuda_device::create_queue()
 {
-	return std::make_shared<cuda_device_executor>(*this);
+	return std::make_shared<cuda_device_queue>(*this);
 }
 
 std::shared_ptr<device_event> cuda_device::create_device_event()

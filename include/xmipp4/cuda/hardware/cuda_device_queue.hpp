@@ -2,39 +2,39 @@
 
 #pragma once
 
-#include <xmipp4/core/hardware/device_executor.hpp>
+#include <xmipp4/core/hardware/device_queue.hpp>
 
 #include "../dynamic_shared_object.h"
 
 #include <cuda_runtime.h>
 
-namespace xmipp4 
+namespace xmipp4
 {
 namespace hardware
 {
 
 class cuda_device;
 
-class cuda_device_executor final
-	: public device_executor
+class cuda_device_queue final
+	: public device_queue
 {
 public:
 	using handle = cudaStream_t;
 
 	XMIPP4_CUDA_API
-	explicit cuda_device_executor(cuda_device &device);
-	cuda_device_executor(const cuda_device_executor &other) = delete;
+	explicit cuda_device_queue(cuda_device &device);
+	cuda_device_queue(const cuda_device_queue &other) = delete;
 	XMIPP4_CUDA_API
-	cuda_device_executor(cuda_device_executor &&other) noexcept;
+	cuda_device_queue(cuda_device_queue &&other) noexcept;
 	XMIPP4_CUDA_API
-	~cuda_device_executor() override;
+	~cuda_device_queue() override;
 
-	cuda_device_executor& operator=(const cuda_device_executor &other) = delete;
+	cuda_device_queue& operator=(const cuda_device_queue &other) = delete;
 	XMIPP4_CUDA_API
-	cuda_device_executor& operator=(cuda_device_executor &&other) noexcept;
+	cuda_device_queue& operator=(cuda_device_queue &&other) noexcept;
 
 	XMIPP4_CUDA_API
-	void swap(cuda_device_executor &other) noexcept;
+	void swap(cuda_device_queue &other) noexcept;
 
 	XMIPP4_CUDA_API
 	void reset() noexcept;
@@ -51,7 +51,7 @@ public:
 private:
 	handle m_stream;
 
-}; 
+};
 
 } // namespace hardware
 } // namespace xmipp4
