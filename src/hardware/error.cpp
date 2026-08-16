@@ -56,7 +56,7 @@ void check_no_throw(
 	}
 	catch (...)
 	{
-		// Nothing else can be done to report the error.
+		// There is no other way left to report the error.
 	}
 }
 

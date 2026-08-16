@@ -6,9 +6,8 @@ string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
 project(
   xmipp4-cuda
 	VERSION ${PROJECT_VERSION}
-	# The CUDA language is only required to compile device code. The plugin
-	# currently reaches the GPU through the runtime API alone, which is plain
-	# C++, so CUDA is added back together with the first kernel.
+	# The plugin reaches the GPU through the runtime API alone, which is plain
+	# C++. The CUDA language comes back with the first kernel.
 	LANGUAGES C CXX
 )
 

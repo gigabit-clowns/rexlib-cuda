@@ -41,10 +41,9 @@ void check(
 /**
  * @brief Check CUDA return code, reporting failures instead of throwing.
  *
- * Meant for destructors and other noexcept contexts. Errors are written to
- * the standard error stream, except cudaErrorCudartUnloading, which is
- * silently ignored: it only means that the CUDA runtime was torn down before
- * the object was destroyed, which is expected at process exit.
+ * Meant for destructors and other noexcept contexts. Failures are written to
+ * the standard error stream, except cudaErrorCudartUnloading, which only
+ * means that the runtime was torn down before the object was destroyed.
  *
  * @param code CUDA return code
  * @param call String identifying the CUDA function call.

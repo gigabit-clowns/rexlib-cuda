@@ -16,6 +16,8 @@ event::event(int ordinal)
 	: m_event(nullptr)
 	, m_ordinal(ordinal)
 {
+	// Timing is never read from these events, and a blocking host wait
+	// yields the CPU instead of spinning.
 	const device_guard guard(ordinal);
 	XMIPP4_CUDA_CHECK(
 		cudaEventCreateWithFlags(
@@ -27,8 +29,8 @@ event::event(int ordinal)
 
 event::~event()
 {
-	// cudaEventDestroy acts on the device that owns the event, so it does
-	// not need the current device to be changed.
+	// Acts on the device that owns the event, so the current one is
+	// irrelevant here.
 	XMIPP4_CUDA_CHECK_NO_THROW( cudaEventDestroy(m_event) );
 }
 
@@ -44,8 +46,6 @@ int event::get_ordinal() const noexcept
 
 event_usage_flags event::get_supported_usage() const noexcept
 {
-	// CUDA events support every capability the framework can request, so
-	// there is no cheaper primitive to pick from.
 	return {
 		event_usage_flag_bits::host_query,
 		event_usage_flag_bits::host_wait,

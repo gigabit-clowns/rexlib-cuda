@@ -20,6 +20,8 @@ command_queue::command_queue(int ordinal)
 	: m_stream(nullptr)
 	, m_ordinal(ordinal)
 {
+	// Non-blocking, so that queues are only ever ordered against each other
+	// through events and never implicitly through the legacy default stream.
 	const device_guard guard(ordinal);
 	XMIPP4_CUDA_CHECK(
 		cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking)
@@ -28,9 +30,8 @@ command_queue::command_queue(int ordinal)
 
 command_queue::~command_queue()
 {
-	// cudaStreamDestroy acts on the device that owns the stream, so it does
-	// not need the current device to be changed. It returns immediately and
-	// the stream is released once the pending work completes.
+	// Acts on the device that owns the stream, so the current one is
+	// irrelevant here.
 	XMIPP4_CUDA_CHECK_NO_THROW( cudaStreamDestroy(m_stream) );
 }
 
@@ -59,9 +60,6 @@ void command_queue::submit(const command &cmd)
 		);
 	}
 
-	// TODO: Execute the program and record this queue on every buffer bound
-	// to the command, so that the allocator can defer their release. The
-	// CUDA backend does not provide any program yet.
 	throw invalid_operation_error(
 		"The CUDA backend does not implement any program yet."
 	);

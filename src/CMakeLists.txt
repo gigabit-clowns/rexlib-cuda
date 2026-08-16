@@ -8,9 +8,9 @@ file(
 		${CMAKE_CURRENT_SOURCE_DIR}/*.c
 )
 
-# Compile the sources once into an object library, so that both the plugin
-# and the unitary test executable can consume them. A MODULE library cannot
-# be linked against, which is what the tests would otherwise need.
+# Compile the sources once into an object library, so that both the plugin and
+# the unitary test executable can consume them. A MODULE cannot be linked
+# against, which is what the tests would otherwise need.
 set(OBJECTS_NAME ${PROJECT_NAME}-objects)
 add_library(${OBJECTS_NAME} OBJECT ${SOURCES})
 set_target_properties(
@@ -47,9 +47,8 @@ if(MSVC)
 	target_compile_definitions(${OBJECTS_NAME} PUBLIC -DNOMINMAX)
 endif()
 
-# Create the plugin. It is only ever loaded at runtime by the core's plugin
-# manager and exposes no headers, so it is a MODULE and everything it links
-# against stays private.
+# Create the plugin. It is only loaded at runtime by the core's plugin manager
+# and exposes no headers, so it is a MODULE and its dependencies stay private.
 set(TARGET_NAME ${PROJECT_NAME})
 add_library(${TARGET_NAME} MODULE $<TARGET_OBJECTS:${OBJECTS_NAME}>)
 set_target_properties(
@@ -63,8 +62,8 @@ target_link_libraries(
 		${OBJECTS_NAME}
 )
 
-# Install the plugin binary. No headers are installed and no config is
-# exported: the plugin has no public interface.
+# Install the plugin binary. No headers and no exported config: the plugin has
+# no public interface.
 install(
 	TARGETS ${TARGET_NAME}
 	LIBRARY DESTINATION ${XMIPP4_PLUGIN_INSTALL_DIR}

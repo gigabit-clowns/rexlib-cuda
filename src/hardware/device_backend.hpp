@@ -14,7 +14,7 @@ namespace cuda
 
 /**
  * @brief Implementation of the @ref xmipp4::device_backend interface to
- * expose the CUDA capable devices present in the system.
+ * retrieve the CUDA capable devices.
  */
 class device_backend final
 	: public xmipp4::device_backend
@@ -32,13 +32,6 @@ public:
 
 	std::shared_ptr<xmipp4::device> create_device(std::size_t id) const override;
 
-	/**
-	 * @brief Register this backend at the provided manager.
-	 *
-	 * @param manager The manager where the backend is registered.
-	 * @return true The backend was registered.
-	 * @return false A backend with the same name was already registered.
-	 */
 	static bool register_at(xmipp4::device_manager &manager);
 };
 

@@ -14,15 +14,7 @@ namespace cuda
 /**
  * @brief CUDA implementation of @ref xmipp4::event, backed by a cudaEvent_t.
  *
- * The underlying event is created with timing disabled, as the framework
- * never reads elapsed times from it, and with blocking synchronization, so
- * that a host wait yields the CPU instead of spinning. Host waits only
- * happen on the deferred release path of the allocator, which is rare
- * enough that yielding is the right trade.
- *
- * A freshly created CUDA event that has never been recorded reports itself
- * as complete, which is exactly the initially signaled state that
- * @ref xmipp4::event requires.
+ * Supports every @ref event_usage_flag_bits value.
  */
 class event final
 	: public xmipp4::event
@@ -30,13 +22,6 @@ class event final
 public:
 	using handle = cudaEvent_t;
 
-	/**
-	 * @brief Create an event on the given device.
-	 *
-	 * @param ordinal The CUDA device ordinal that owns the event.
-	 *
-	 * @throws error If the event cannot be created.
-	 */
 	explicit event(int ordinal);
 	event(const event &other) = delete;
 	event(event &&other) = delete;
@@ -45,18 +30,7 @@ public:
 	event& operator=(const event &other) = delete;
 	event& operator=(event &&other) = delete;
 
-	/**
-	 * @brief Get the underlying CUDA event.
-	 *
-	 * @return handle The CUDA event. Never null.
-	 */
 	handle get_handle() const noexcept;
-
-	/**
-	 * @brief Get the device that owns this event.
-	 *
-	 * @return int The CUDA device ordinal.
-	 */
 	int get_ordinal() const noexcept;
 
 	event_usage_flags get_supported_usage() const noexcept override;
@@ -77,8 +51,6 @@ public:
 
 	/**
 	 * @brief Downcast an event to this backend's implementation.
-	 *
-	 * Const overload of @ref cast(xmipp4::event&).
 	 *
 	 * @param ev The event to be cast.
 	 * @return const event& The same event, as a CUDA event.

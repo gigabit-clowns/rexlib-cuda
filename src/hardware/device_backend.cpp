@@ -48,10 +48,9 @@ std::string device_backend::get_name() const
 
 version device_backend::get_version() const
 {
-	// Querying the runtime version goes through the driver, so it fails on a
-	// system whose driver is missing or older than the runtime. The version
-	// the plugin was built against is a good answer there, and it keeps the
-	// backend describable on machines that cannot run anything on a GPU.
+	// Querying the runtime version goes through the driver, which fails when
+	// it is missing or older than the runtime. The version the plugin was
+	// built against is a valid answer there.
 	int cuda_version;
 	if (cudaRuntimeGetVersion(&cuda_version) != cudaSuccess)
 	{
@@ -101,7 +100,6 @@ bool device_backend::get_device_properties(
 		cudaDeviceProp prop;
 		XMIPP4_CUDA_CHECK( cudaGetDeviceProperties(&prop, ordinal) );
 
-		// Convert
 		const auto type =
 			prop.integrated ? device_type::integrated_gpu : device_type::gpu;
 		auto location = pci_id_to_string(
@@ -110,7 +108,6 @@ bool device_backend::get_device_properties(
 			prop.pciDeviceID
 		);
 
-		// Write
 		desc.set_name(std::string(prop.name));
 		desc.set_physical_location(std::move(location));
 		desc.set_type(type);

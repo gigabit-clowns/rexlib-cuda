@@ -14,21 +14,14 @@ namespace cuda
 /**
  * @brief CUDA implementation of @ref xmipp4::device.
  *
- * The handle is a thin wrapper around a CUDA device ordinal: it owns no
- * driver resource of its own and merely acts as the factory for the queues,
- * events and allocators that belong to that device. Several handles may
- * therefore refer to the same physical device without interfering with each
- * other.
+ * The handle is a thin wrapper around a device ordinal: it owns no driver
+ * resource of its own, so several handles may refer to the same physical
+ * device without interfering with each other.
  */
 class device final
 	: public xmipp4::device
 {
 public:
-	/**
-	 * @brief Construct a handle for the given device.
-	 *
-	 * @param ordinal The CUDA device ordinal.
-	 */
 	explicit device(int ordinal) noexcept;
 	device(const device &other) = delete;
 	device(device &&other) = delete;
@@ -37,11 +30,6 @@ public:
 	device& operator=(const device &other) = delete;
 	device& operator=(device &&other) = delete;
 
-	/**
-	 * @brief Get the ordinal of the device this handle refers to.
-	 *
-	 * @return int The CUDA device ordinal.
-	 */
 	int get_ordinal() const noexcept;
 
 	const memory_resource&
