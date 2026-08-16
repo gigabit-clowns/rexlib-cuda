@@ -48,8 +48,15 @@ std::string device_backend::get_name() const
 
 version device_backend::get_version() const
 {
+	// Querying the runtime version goes through the driver, so it fails on a
+	// system whose driver is missing or older than the runtime. The version
+	// the plugin was built against is a good answer there, and it keeps the
+	// backend describable on machines that cannot run anything on a GPU.
 	int cuda_version;
-	XMIPP4_CUDA_CHECK( cudaRuntimeGetVersion(&cuda_version) );
+	if (cudaRuntimeGetVersion(&cuda_version) != cudaSuccess)
+	{
+		cuda_version = CUDART_VERSION;
+	}
 
 	const auto major_div = std::div(cuda_version, 1000);
 	const auto minor_div = std::div(major_div.rem, 10);
