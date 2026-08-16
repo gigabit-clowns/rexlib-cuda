@@ -6,7 +6,10 @@ string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
 project(
   xmipp4-cuda
 	VERSION ${PROJECT_VERSION}
-	LANGUAGES C CXX CUDA
+	# The CUDA language is only required to compile device code. The plugin
+	# currently reaches the GPU through the runtime API alone, which is plain
+	# C++, so CUDA is added back together with the first kernel.
+	LANGUAGES C CXX
 )
 
 # Include CMake packages
@@ -19,7 +22,7 @@ if(NOT TARGET xmipp4-core)
 endif()
 
 # Find dependencies
-find_package(CUDAToolkit 10 REQUIRED)
+find_package(CUDAToolkit 11 REQUIRED)
 
 # Set project-wide compilation options
 set(CMAKE_CXX_STANDARD 20)
