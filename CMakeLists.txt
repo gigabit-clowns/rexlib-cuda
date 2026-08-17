@@ -6,7 +6,10 @@ string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
 project(
   xmipp4-cuda
 	VERSION ${PROJECT_VERSION}
-	LANGUAGES C CXX CUDA
+	# CUDA is left out until there is device code to compile. Declaring it
+	# needs the MSBuild toolset that the toolkit installs into Visual Studio,
+	# and CUDA 12.8 has none for the version the Windows runner ships.
+	LANGUAGES C CXX
 )
 
 # Include CMake packages
