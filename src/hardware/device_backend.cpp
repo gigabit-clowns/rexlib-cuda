@@ -5,6 +5,8 @@
 #include "device.hpp"
 #include "error.hpp"
 
+#include "../config.hpp"
+
 #include <xmipp4/core/hardware/device_manager.hpp>
 
 #include <cstdlib>
@@ -112,7 +114,7 @@ bool device_backend::get_device_properties(
 		desc.set_physical_location(std::move(location));
 		desc.set_type(type);
 		desc.set_total_memory_bytes(prop.totalGlobalMem);
-		desc.set_optimal_data_alignment(256);
+		desc.set_optimal_data_alignment(XMIPP4_CUDA_COALESCE_ALIGN_BYTES);
 	}
 
 	return result;

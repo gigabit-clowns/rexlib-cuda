@@ -6,9 +6,7 @@ string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
 project(
   xmipp4-cuda
 	VERSION ${PROJECT_VERSION}
-	# The plugin reaches the GPU through the runtime API alone, which is plain
-	# C++. The CUDA language comes back with the first kernel.
-	LANGUAGES C CXX
+	LANGUAGES C CXX CUDA
 )
 
 # Include CMake packages

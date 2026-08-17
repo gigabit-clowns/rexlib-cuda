@@ -45,8 +45,15 @@ void check_no_throw(
 	int line
 ) noexcept
 {
-	if (code == cudaSuccess || code == cudaErrorCudartUnloading)
+	if (code == cudaSuccess)
 	{
+		return;
+	}
+
+	if (code == cudaErrorCudartUnloading)
+	{
+		// Nothing to report: the runtime was torn down before this object was
+		// destroyed, so whatever was being released is gone with it.
 		return;
 	}
 

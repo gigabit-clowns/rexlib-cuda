@@ -27,6 +27,9 @@ public:
 	device_guard& operator=(device_guard &&other) = delete;
 
 private:
+	/// Spares the destructor a query when the device was already current.
+	static constexpr int no_selection = -1;
+
 	int m_previous;
 };
 

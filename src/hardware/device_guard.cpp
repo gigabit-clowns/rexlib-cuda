@@ -12,20 +12,21 @@ namespace cuda
 {
 
 device_guard::device_guard(int ordinal)
-	: m_previous(ordinal)
+	: m_previous(no_selection)
 {
-	XMIPP4_CUDA_CHECK( cudaGetDevice(&m_previous) );
+	int previous;
+	XMIPP4_CUDA_CHECK( cudaGetDevice(&previous) );
 
-	if (m_previous != ordinal)
+	if (previous != ordinal)
 	{
 		XMIPP4_CUDA_CHECK( cudaSetDevice(ordinal) );
+		m_previous = previous;
 	}
 }
 
 device_guard::~device_guard()
 {
-	int current;
-	if (cudaGetDevice(&current) == cudaSuccess && current != m_previous)
+	if (m_previous != no_selection)
 	{
 		XMIPP4_CUDA_CHECK_NO_THROW( cudaSetDevice(m_previous) );
 	}
