@@ -24,9 +24,7 @@ jobs:
         - os: ubuntu-22.04
           compiler: {cc: gcc, cxx: g++}
           cuda: 11.8.0
-        # Visual Studio 2026 is only supported from CUDA 13.2 onwards, and it
-        # is what the Windows runner ships. Older toolkits install no MSBuild
-        # integration for it, which the CUDA language needs.
+        # Visual Studio 2026 is only supported from CUDA 13.2 onwards
         - os: windows-latest
           compiler: {cc: cl, cxx: cl}
           cuda: 13.3.1
@@ -46,9 +44,6 @@ jobs:
         with:
           cuda: ${{ matrix.cuda }}
           method: 'network'
-          # The plugin only links against the CUDA runtime, so pulling the
-          # whole toolkit downloads several GB of profilers and math libraries
-          # that nothing here uses.
           sub-packages: ${{ runner.os=='Linux' && '["nvcc", "cudart-dev"]' || '[]' }} # Fake ternary operator
           log-file-suffix: '${{matrix.os}}-${{matrix.compiler.cc}}-${{matrix.cuda}}.txt'
 
