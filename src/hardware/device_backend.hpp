@@ -4,6 +4,8 @@
 
 #include <xmipp4/core/hardware/device_backend.hpp>
 
+#include "memory/memory_resource_registry.hpp"
+
 namespace xmipp4
 {
 
@@ -33,6 +35,11 @@ public:
 	std::shared_ptr<xmipp4::device> create_device(std::size_t id) const override;
 
 	static bool register_at(xmipp4::device_manager &manager);
+
+private:
+	// Devices are created on demand and the backend outlives them, so this is
+	// where the per device resources are shared from.
+	mutable memory_resource_registry m_resources;
 };
 
 } // namespace cuda

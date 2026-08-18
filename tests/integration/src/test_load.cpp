@@ -4,6 +4,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <xmipp4/core/exceptions/invalid_operation_error.hpp>
+#include <xmipp4/core/hardware/buffer.hpp>
 #include <xmipp4/core/hardware/command.hpp>
 #include <xmipp4/core/hardware/command_queue.hpp>
 #include <xmipp4/core/hardware/device.hpp>
@@ -11,7 +12,11 @@
 #include <xmipp4/core/hardware/device_manager.hpp>
 #include <xmipp4/core/hardware/device_properties.hpp>
 #include <xmipp4/core/hardware/device_type.hpp>
+#include <xmipp4/core/hardware/device_session.hpp>
 #include <xmipp4/core/hardware/event.hpp>
+#include <xmipp4/core/hardware/memory_allocator.hpp>
+#include <xmipp4/core/hardware/memory_resource.hpp>
+#include <xmipp4/core/hardware/memory_resource_kind.hpp>
 #include <xmipp4/core/platform/operating_system.h>
 #include <xmipp4/core/plugin.hpp>
 #include <xmipp4/core/plugin_manager.hpp>
@@ -160,7 +165,7 @@ TEST_CASE( "synchronize a CUDA queue through an event", "[cuda]" )
 	REQUIRE_THROWS_AS( queue->signal(other), std::invalid_argument );
 }
 
-TEST_CASE( "the CUDA backend reports what it does not implement yet", "[cuda]" )
+TEST_CASE( "the CUDA backend has no program to submit yet", "[cuda]" )
 {
 	plugin_manager manager;
 	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
@@ -181,14 +186,159 @@ TEST_CASE( "the CUDA backend reports what it does not implement yet", "[cuda]" )
 
 	const auto dev = backend->create_device(ids.front());
 
-	// Memory resources arrive with the allocator, so no device session can be
-	// built for a CUDA device yet.
-	REQUIRE_THROWS_AS(
-		dev->get_memory_resource(memory_resource_affinity::device),
-		invalid_operation_error
-	);
-
 	// Submitting requires a program, and this backend provides none.
 	const auto queue = dev->create_command_queue();
 	REQUIRE_THROWS_AS( queue->submit(command()), std::invalid_argument );
+}
+
+TEST_CASE( "expose the CUDA memory resources", "[cuda]" )
+{
+	plugin_manager manager;
+	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+
+	service_catalog catalog;
+	register_all_plugins_at(manager, catalog);
+
+	const auto device_manager = catalog.get_service_manager<xmipp4::device_manager>();
+	auto *backend = device_manager->get_backend("cuda");
+	REQUIRE( backend != nullptr );
+
+	std::vector<std::size_t> ids;
+	backend->enumerate_devices(ids);
+	if (ids.empty())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	const auto dev = backend->create_device(ids.front());
+
+	const auto &device_memory =
+		dev->get_memory_resource(memory_resource_affinity::device);
+	REQUIRE( device_memory.get_kind() == memory_resource_kind::device_local );
+	REQUIRE( is_device_accessible(device_memory.get_kind()) );
+
+	const auto &host_memory =
+		dev->get_memory_resource(memory_resource_affinity::host);
+	REQUIRE( is_host_accessible(host_memory.get_kind()) );
+
+	// Two handles on the same device must share their resources, or the
+	// allocators behind them would cache the same memory twice.
+	const auto other = backend->create_device(ids.front());
+	REQUIRE(
+		&other->get_memory_resource(memory_resource_affinity::device) ==
+		&device_memory
+	);
+
+	// A resource hands out one allocator, not one per request.
+	const auto allocator = device_memory.create_allocator();
+	REQUIRE( allocator != nullptr );
+	REQUIRE( device_memory.create_allocator() == allocator );
+	REQUIRE( &allocator->get_memory_resource() == &device_memory );
+}
+
+TEST_CASE( "allocate on a CUDA device", "[cuda]" )
+{
+	plugin_manager manager;
+	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+
+	service_catalog catalog;
+	register_all_plugins_at(manager, catalog);
+
+	const auto device_manager = catalog.get_service_manager<xmipp4::device_manager>();
+	auto *backend = device_manager->get_backend("cuda");
+	REQUIRE( backend != nullptr );
+
+	std::vector<std::size_t> ids;
+	backend->enumerate_devices(ids);
+	if (ids.empty())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	const auto dev = backend->create_device(ids.front());
+
+	SECTION( "device local memory is not reachable from the host" )
+	{
+		const auto allocator =
+			dev->get_memory_resource(memory_resource_affinity::device)
+			   .create_allocator();
+
+		const auto buf = allocator->allocate(1024, 256, nullptr);
+		REQUIRE( buf != nullptr );
+		REQUIRE( buf->get_size() >= 1024 );
+		REQUIRE( buf->get_host_ptr() == nullptr );
+	}
+
+	SECTION( "pinned memory can be written through" )
+	{
+		const auto allocator =
+			dev->get_memory_resource(memory_resource_affinity::host)
+			   .create_allocator();
+
+		const auto buf = allocator->allocate(1024, 256, nullptr);
+		REQUIRE( buf != nullptr );
+		REQUIRE( buf->get_size() >= 1024 );
+
+		auto *data = static_cast<unsigned char*>(buf->get_host_ptr());
+		REQUIRE( data != nullptr );
+		data[0] = 42;
+		data[1023] = 7;
+		REQUIRE( data[0] == 42 );
+		REQUIRE( data[1023] == 7 );
+	}
+
+	SECTION( "invalid alignments are rejected" )
+	{
+		const auto allocator =
+			dev->get_memory_resource(memory_resource_affinity::device)
+			   .create_allocator();
+
+		REQUIRE_THROWS_AS( allocator->allocate(16, 3, nullptr), std::invalid_argument );
+		REQUIRE_THROWS_AS(
+			allocator->allocate(16, allocator->get_max_alignment() * 2, nullptr),
+			std::invalid_argument
+		);
+	}
+}
+
+TEST_CASE( "build a device session on a CUDA device", "[cuda]" )
+{
+	plugin_manager manager;
+	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+
+	service_catalog catalog;
+	register_all_plugins_at(manager, catalog);
+
+	const auto device_manager = catalog.get_service_manager<xmipp4::device_manager>();
+
+	std::vector<device_index> indices;
+	device_manager->enumerate_devices(indices);
+
+	const auto ite = std::find_if(
+		indices.cbegin(), indices.cend(),
+		[] (const device_index &index)
+		{
+			return index.get_backend_name() == "cuda";
+		}
+	);
+	if (ite == indices.cend())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	// This is the entry point the rest of the framework goes through, and it
+	// needs both allocators and a default queue to succeed.
+	const auto session = device_manager->create_device_session(*ite);
+	REQUIRE( session != nullptr );
+	REQUIRE( session->get_device() != nullptr );
+	REQUIRE( session->get_default_queue() != nullptr );
+	REQUIRE( session->get_allocator(memory_resource_affinity::device) != nullptr );
+	REQUIRE( session->get_allocator(memory_resource_affinity::host) != nullptr );
+	REQUIRE_FALSE( session->get_properties().get_name().empty() );
+
+	const auto buf = session
+		->get_allocator(memory_resource_affinity::device)
+		->allocate(4096, 256, session->get_default_queue().get());
+	REQUIRE( buf != nullptr );
+	REQUIRE( buf->get_size() >= 4096 );
 }

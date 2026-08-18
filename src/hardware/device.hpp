@@ -11,6 +11,9 @@ namespace xmipp4
 namespace cuda
 {
 
+class device_memory_resource;
+class pinned_memory_resource;
+
 /**
  * @brief CUDA implementation of @ref xmipp4::device.
  *
@@ -22,7 +25,11 @@ class device final
 	: public xmipp4::device
 {
 public:
-	explicit device(int ordinal) noexcept;
+	device(
+		int ordinal,
+		std::shared_ptr<const device_memory_resource> device_memory,
+		std::shared_ptr<const pinned_memory_resource> pinned_memory
+	) noexcept;
 	device(const device &other) = delete;
 	device(device &&other) = delete;
 	~device() override;
@@ -32,7 +39,7 @@ public:
 
 	int get_ordinal() const noexcept;
 
-	const memory_resource&
+	const xmipp4::memory_resource&
 	get_memory_resource(memory_resource_affinity affinity) const override;
 
 	std::shared_ptr<xmipp4::command_queue> create_command_queue() const override;
@@ -42,6 +49,8 @@ public:
 
 private:
 	int m_ordinal;
+	std::shared_ptr<const device_memory_resource> m_device_memory;
+	std::shared_ptr<const pinned_memory_resource> m_pinned_memory;
 };
 
 } // namespace cuda

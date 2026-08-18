@@ -46,8 +46,10 @@ jobs:
         with:
           cuda: ${{ matrix.cuda }}
           method: 'network'
-          sub-packages: ${{ runner.os=='Linux' && '["nvcc", "toolkit"]' || '[]' }} # Fake ternary operator
-          non-cuda-sub-packages: '["libcublas", "libcufft", "libcusolver"]'
+          # The plugin only links against the CUDA runtime, so pulling the
+          # whole toolkit downloads several GB of profilers and math libraries
+          # that nothing here uses.
+          sub-packages: ${{ runner.os=='Linux' && '["nvcc", "cudart-dev"]' || '[]' }} # Fake ternary operator
           log-file-suffix: '${{matrix.os}}-${{matrix.compiler.cc}}-${{matrix.cuda}}.txt'
 
       - name: Install xmipp4-core

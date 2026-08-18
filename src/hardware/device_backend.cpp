@@ -135,7 +135,11 @@ device_backend::create_device(std::size_t id) const
 		throw std::invalid_argument("Invalid device id");
 	}
 
-	return std::make_shared<device>(ordinal);
+	return std::make_shared<device>(
+		ordinal,
+		m_resources.get_device_memory(ordinal),
+		m_resources.get_pinned_memory(ordinal)
+	);
 }
 
 bool device_backend::register_at(xmipp4::device_manager &manager)
