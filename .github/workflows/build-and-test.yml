@@ -24,9 +24,12 @@ jobs:
         - os: ubuntu-22.04
           compiler: {cc: gcc, cxx: g++}
           cuda: 11.8.0
+        # Visual Studio 2026 is only supported from CUDA 13.2 onwards, and it
+        # is what the Windows runner ships. Older toolkits install no MSBuild
+        # integration for it, which the CUDA language needs.
         - os: windows-latest
           compiler: {cc: cl, cxx: cl}
-          cuda: 12.8.1
+          cuda: 13.3.1
   
     runs-on: ${{ matrix.os }}
     env:
