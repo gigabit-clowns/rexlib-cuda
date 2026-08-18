@@ -18,9 +18,7 @@ class memory_heap;
  * @brief Base of the memory resources this backend exposes.
  *
  * Adds what the allocators need on top of the framework interface: a way to
- * obtain heaps and the strictest alignment they can be asked for. Resources
- * are always held through a shared_ptr, so that a buffer outliving the
- * device it came from keeps its own resource alive.
+ * obtain heaps and the strictest alignment they can be asked for.
  */
 class memory_resource
 	: public xmipp4::memory_resource

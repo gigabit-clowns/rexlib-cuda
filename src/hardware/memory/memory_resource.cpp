@@ -23,8 +23,7 @@ int memory_resource::get_ordinal() const noexcept
 
 std::shared_ptr<memory_allocator> memory_resource::create_allocator() const
 {
-	// One allocator per resource, so that everything allocating on a device
-	// draws from the same pool once the caching allocator replaces this one.
+	// One allocator per resource, so that a device draws from a single pool.
 	auto result = m_allocator.lock();
 	if (!result)
 	{

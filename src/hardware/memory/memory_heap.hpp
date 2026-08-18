@@ -27,9 +27,6 @@ public:
 	memory_heap& operator=(const memory_heap &other) = delete;
 	memory_heap& operator=(memory_heap &&other) = delete;
 
-	/**
-	 * @brief Get the device accessible pointer to the start of the heap.
-	 */
 	virtual void* get_device_ptr() const noexcept = 0;
 
 	/**

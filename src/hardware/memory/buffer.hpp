@@ -38,9 +38,6 @@ public:
 	std::size_t get_size() const noexcept override;
 	const xmipp4::memory_resource& get_memory_resource() const noexcept override;
 
-	/**
-	 * @brief Get the device accessible pointer to the start of the buffer.
-	 */
 	void* get_device_ptr() const noexcept;
 
 	/**

@@ -37,8 +37,6 @@ public:
 	static bool register_at(xmipp4::device_manager &manager);
 
 private:
-	// Devices are created on demand and the backend outlives them, so this is
-	// where the per device resources are shared from.
 	mutable memory_resource_registry m_resources;
 };
 
