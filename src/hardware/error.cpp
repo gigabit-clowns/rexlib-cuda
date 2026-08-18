@@ -4,7 +4,7 @@
 
 #include "error.hpp"
 
-#include <iostream>
+#include <cstdio>
 #include <sstream>
 
 namespace xmipp4
@@ -57,14 +57,13 @@ void check_no_throw(
 		return;
 	}
 
-	try
-	{
-		std::cerr << format_error(code, call, file, line);
-	}
-	catch (...)
-	{
-		// There is no other way left to report the error.
-	}
+	// Reporting through the standard streams would allocate, and this runs
+	// where there is no way left to handle a failure to do so.
+	std::fprintf(
+		stderr,
+		"CUDA Runtime Error at: %s:%d\n%s %s\n",
+		file, line, cudaGetErrorString(code), call
+	);
 }
 
 } // namespace cuda

@@ -56,7 +56,7 @@ jobs:
           git clone https://github.com/gigabit-clowns/xmipp4-core.git
           cd xmipp4-core
           git checkout tags/development
-          pip install --no-index --find-links=dist xmipp4-core
+          pip install --only-binary :all: --no-index --find-links=dist xmipp4-core
 
       - name: Configure and build with CMake
         uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406 # v2

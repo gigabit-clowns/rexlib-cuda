@@ -5,7 +5,7 @@
 #include "command_queue.hpp"
 #include "event.hpp"
 
-#include <stdexcept>
+#include <xmipp4/core/exceptions/invalid_operation_error.hpp>
 
 namespace xmipp4
 {
@@ -27,7 +27,7 @@ int device::get_ordinal() const noexcept
 const memory_resource&
 device::get_memory_resource(memory_resource_affinity /*affinity*/) const
 {
-	throw std::runtime_error(
+	throw invalid_operation_error(
 		"The CUDA backend does not expose any memory resource yet."
 	);
 }

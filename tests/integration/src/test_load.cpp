@@ -3,6 +3,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <xmipp4/core/exceptions/invalid_operation_error.hpp>
 #include <xmipp4/core/hardware/command.hpp>
 #include <xmipp4/core/hardware/command_queue.hpp>
 #include <xmipp4/core/hardware/device.hpp>
@@ -184,7 +185,7 @@ TEST_CASE( "the CUDA backend reports what it does not implement yet", "[cuda]" )
 	// built for a CUDA device yet.
 	REQUIRE_THROWS_AS(
 		dev->get_memory_resource(memory_resource_affinity::device),
-		std::runtime_error
+		invalid_operation_error
 	);
 
 	// Submitting requires a program, and this backend provides none.
