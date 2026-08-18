@@ -120,8 +120,12 @@ This is where reviews on this repo get spent. The rules, taken from what the cor
 - **But internal types with non-obvious contracts do get full docs.** `src/core/hardware/memory_allocator_table.hpp` is the example. The rule is not "always terse", it is "terse when implementing an interface that is already documented".
 - **Inline comments explain a _why_ the code cannot state.** Never a _what_. No section markers like `// Convert` / `// Write`. The whole core carries under a hundred lines of them across a hundred source files, clustered in genuinely tricky code.
 - **Never restate** something already said in a class docstring, a sibling header, or an exception message.
+- **One line is usually the whole comment**, in any language, CI files included. The reasoning behind a decision belongs in the commit message or the pull request, not next to the code. A three-line comment is nearly always two lines too long.
+- **Say the fact, not the chain of reasoning that led to it.** When the value being commented already carries the meaning, write nothing.
 
-Before opening a PR, grep the diff for `^\s*//` and for every docstring added, and justify each against the list.
+The last two were settled by review on this repo: a three-line note on the Windows CUDA version was cut to `# Visual Studio 2026 is only supported from CUDA 13.2 onwards`, and a three-line note explaining the trimmed CUDA sub-packages was deleted outright, because `["nvcc", "cudart-dev"]` already says it.
+
+Before opening a PR, grep the diff for `^\s*//` and `^\s*#` and for every docstring added, and justify each against the list.
 
 ### Types
 Use `xmipp4::byte*` for raw memory, not `void*`. The core defines it in `memory/byte.hpp`. `void*` is acceptable only where an outside interface imposes it — `xmipp4::buffer::get_host_ptr`, and the CUDA runtime writing through a `void**`.
