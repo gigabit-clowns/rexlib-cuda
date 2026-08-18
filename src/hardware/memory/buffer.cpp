@@ -12,9 +12,9 @@ namespace xmipp4
 namespace cuda
 {
 
-static void* offset_pointer(void *base, std::size_t offset) noexcept
+static byte* offset_pointer(byte *base, std::size_t offset) noexcept
 {
-	return base ? static_cast<std::byte*>(base) + offset : nullptr;
+	return base ? base + offset : nullptr;
 }
 
 
@@ -55,7 +55,7 @@ const xmipp4::memory_resource& buffer::get_memory_resource() const noexcept
 	return *m_resource;
 }
 
-void* buffer::get_device_ptr() const noexcept
+byte* buffer::get_device_ptr() const noexcept
 {
 	return offset_pointer(m_heap->get_device_ptr(), m_offset);
 }

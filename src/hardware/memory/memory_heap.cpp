@@ -21,8 +21,10 @@ device_memory_heap::device_memory_heap(int ordinal, std::size_t size)
 	, m_size(size)
 	, m_ordinal(ordinal)
 {
+	void *data = nullptr;
 	const device_guard guard(ordinal);
-	XMIPP4_CUDA_CHECK( cudaMalloc(&m_data, size) );
+	XMIPP4_CUDA_CHECK( cudaMalloc(&data, size) );
+	m_data = static_cast<byte*>(data);
 }
 
 device_memory_heap::~device_memory_heap()
@@ -44,12 +46,12 @@ device_memory_heap::~device_memory_heap()
 	}
 }
 
-void* device_memory_heap::get_device_ptr() const noexcept
+byte* device_memory_heap::get_device_ptr() const noexcept
 {
 	return m_data;
 }
 
-void* device_memory_heap::get_host_ptr() const noexcept
+byte* device_memory_heap::get_host_ptr() const noexcept
 {
 	return nullptr;
 }
@@ -65,8 +67,10 @@ pinned_memory_heap::pinned_memory_heap(int ordinal, std::size_t size)
 	: m_data(nullptr)
 	, m_size(size)
 {
+	void *data = nullptr;
 	const device_guard guard(ordinal);
-	XMIPP4_CUDA_CHECK( cudaHostAlloc(&m_data, size, cudaHostAllocDefault) );
+	XMIPP4_CUDA_CHECK( cudaHostAlloc(&data, size, cudaHostAllocDefault) );
+	m_data = static_cast<byte*>(data);
 }
 
 pinned_memory_heap::~pinned_memory_heap()
@@ -75,13 +79,13 @@ pinned_memory_heap::~pinned_memory_heap()
 	XMIPP4_CUDA_CHECK_NO_THROW( cudaFreeHost(m_data) );
 }
 
-void* pinned_memory_heap::get_device_ptr() const noexcept
+byte* pinned_memory_heap::get_device_ptr() const noexcept
 {
 	// Unified addressing makes the host pointer valid on the device too.
 	return m_data;
 }
 
-void* pinned_memory_heap::get_host_ptr() const noexcept
+byte* pinned_memory_heap::get_host_ptr() const noexcept
 {
 	return m_data;
 }

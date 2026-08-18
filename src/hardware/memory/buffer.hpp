@@ -3,6 +3,7 @@
 #pragma once
 
 #include <xmipp4/core/hardware/buffer.hpp>
+#include <xmipp4/core/memory/byte.hpp>
 
 #include <memory>
 
@@ -38,7 +39,7 @@ public:
 	std::size_t get_size() const noexcept override;
 	const xmipp4::memory_resource& get_memory_resource() const noexcept override;
 
-	void* get_device_ptr() const noexcept;
+	byte* get_device_ptr() const noexcept;
 
 	/**
 	 * @brief Downcast a buffer to this backend's implementation.
