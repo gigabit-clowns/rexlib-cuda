@@ -50,13 +50,6 @@ void check_no_throw(
 		return;
 	}
 
-	if (code == cudaErrorCudartUnloading)
-	{
-		// Nothing to report: the runtime was torn down before this object was
-		// destroyed, so whatever was being released is gone with it.
-		return;
-	}
-
 	// Reporting through the standard streams would allocate, and this runs
 	// where there is no way left to handle a failure to do so.
 	std::fprintf(
