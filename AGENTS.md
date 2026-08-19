@@ -10,6 +10,7 @@
 - The reference for "how a backend is written today" is the core's own CPU backend: `src/backends/cpu/hardware/` and `src/core/hardware/host_memory/`. Mirror it.
 - **No `.cu` files exist and none are planned yet.** Everything reaches the GPU through the runtime API, which is plain C++. See §9 before adding device code.
 - The plugin is **mid-rework**. `command_queue::submit` throws: there are no programs yet. See §10 for what is done and what is not.
+- Boost (`intrusive`, `unordered`, `container`) comes through `cmake/modules/fetch_boost.cmake`, copied from the core. Keep the version in step with it.
 
 ---
 ## 1. Project Overview
@@ -49,13 +50,14 @@ src/
     ├── command_queue.{hpp,cpp} # cudaStream_t
     ├── event.{hpp,cpp}         # cudaEvent_t
     └── memory/
-        ├── memory_heap.{hpp,cpp}              # One CUDA allocation
-        ├── memory_resource.{hpp,cpp}          # Base adding create_heap/get_max_alignment
-        ├── device_memory_resource.{hpp,cpp}   # cudaMalloc, device_local
-        ├── pinned_memory_resource.{hpp,cpp}   # cudaHostAlloc, host_staging/unified
-        ├── memory_resource_registry.{hpp,cpp} # One resource per device ordinal
-        ├── buffer.{hpp,cpp}                   # A range of a heap
-        └── direct_memory_allocator.{hpp,cpp}  # One heap per buffer
+        ├── memory_heap.{hpp,cpp}                 # One CUDA allocation
+        ├── device_memory_resource.{hpp,cpp}      # cudaMalloc, device_local
+        ├── pinned_memory_resource.{hpp,cpp}      # cudaHostAlloc, process wide
+        ├── memory_block.{hpp,inl}                # A range of a heap
+        ├── memory_block_pool.{hpp,cpp}           # Free lists, merging, heap release
+        ├── memory_block_deferred_release.{hpp,cpp}
+        ├── caching_memory_allocator.{hpp,inl,cpp}
+        └── buffer.{hpp,cpp}
 ```
 
 ### Naming
@@ -105,7 +107,7 @@ Point `CUDAToolkit_ROOT` at a specific toolkit when several are installed; `/usr
   cd build/tests/integration && CUDA_VISIBLE_DEVICES="" ./xmipp4-cuda_integration_tests --reporter compact
   ```
   The second one must report skips, not failures.
-- `tests/unitary/` is wired but not enabled. It comes with the caching allocator, whose logic is testable without a GPU.
+- `tests/unitary/` is wired but not enabled. See §10.
 
 ---
 ## 5. Code Style
@@ -147,14 +149,21 @@ CUDA events satisfy every `event_usage_flag_bits`, so `create_event` ignores the
 Streams are created with `cudaStreamNonBlocking`, so queues are only ever ordered against each other through events and never implicitly through the legacy default stream.
 
 ### Buffers name a range of a heap
-A `buffer` holds a heap, an offset and a size — not an allocation of its own. This is what will let the caching allocator hand out several buffers from one call to the driver **without changing `buffer` at all**. Do not "simplify" this into one allocation per buffer.
+A `buffer` holds a `memory_block`, which names a range of a heap — not an allocation of its own. That is what lets the allocator hand out several buffers from one call to the driver. Do not "simplify" it into one allocation per buffer.
 
-A buffer keeps its heap **and** its resource alive, so it stays valid however the device that produced it is disposed of.
+A buffer keeps its resource and its allocator alive, so it stays valid however the device or session that produced it is disposed of.
 
-### Resources are shared per ordinal, through weak references
-Two device handles on the same GPU must share their memory resources, or the allocators behind them would cache the same memory twice. `memory_resource_registry`, owned by the backend, holds `weak_ptr`s: resources live exactly as long as the devices, allocators and buffers using them, and free their memory while the CUDA runtime is still up.
+### The allocator caches, and segregates by queue
+Released blocks return to `memory_block_pool`, are merged with their free neighbours, and are handed out again. The driver only sees a request when nothing suitable is left, and only gets memory back through `release_unused_heaps`, which runs when it refuses one.
 
-**Do not make these process-wide statics.** That was the original plan and it was rejected in review: holding managed objects past a forceful destruction is not a pattern to build on.
+Blocks belong to the queue they were allocated for. That queue can be given a block it just released without any synchronization, because its own work is ordered. Any **other** queue that was given work on the buffer is recorded on it, and the release is held behind an event per queue until they have all passed the point.
+
+It is written for CUDA, not for every backend: concrete streams and events, no virtual dispatch in the pool, and the resource reaches the allocator as a template parameter rather than through a base class.
+
+### Resources are shared per device
+Every handle on a GPU shares its resources, or the allocators behind them would each hold a cache of the same memory. The backend owns them: a map by ordinal for device memory, and a single one for pinned memory, which is process-wide and portable across contexts rather than tied to any device.
+
+**Do not make these process-wide statics.** It was proposed and rejected in review: holding managed objects past a forceful destruction is not a pattern to build on.
 
 ---
 ## 7. CI
@@ -204,10 +213,10 @@ Custom kernels are the line: `__global__`, `<<<>>>` and device intrinsics need a
 The plugin is being brought back in line with the core after a long drift. Done:
 
 - **Hardware layer** (#120) — backend, device, queue, event, error handling, `device_guard`.
-- **Memory resources** (#121) — heaps, buffers, both resources, a direct allocator. `device_session` builds.
+- **Memory resources and the caching allocator** (#121) — heaps, blocks, pool, deferred release, buffers, both resources. `device_session` builds and allocations are served from the cache.
 
 Next, in order:
 
-1. **The caching allocator.** Port `memory_block`, `memory_block_pool` and `memory_block_deferred_release` from the allocator that used to live in the core, plus the allocator itself, Boost via a `fetch_boost.cmake` copied from the core, and unitary tests. Keep the deferred release expressed in terms of the core's `event`/`command_queue` so it stays testable without a GPU. Two things not to carry over: the original `recycle_block` leaks the block on its no-device branch, and `buffer_sentinel` no longer exists — the queue set lives in `cuda::buffer` and `command_queue::submit` records it.
-2. **`copy_operation` and `fill_operation` builders.** These replace the `memory_transfer_*` classes deleted in #120 and are what make the plugin usable end to end.
-3. **Queue tracking, benchmark, integration.** Wire the stream recording in `submit`, and update `xmipp4-allocator-test`.
+1. **`copy_operation` and `fill_operation` builders.** These replace the `memory_transfer_*` classes deleted in #120 and are what make the plugin usable end to end. They also close the last gap in the allocator: `command_queue::submit` has to call `buffer::record_queue` on every bound buffer, which is what feeds the deferred release. Until a program exists there is nothing to record.
+2. **Unitary tests.** `memory_block_pool` is pure bookkeeping and its merging and heap release deserve tests that do not need a GPU. It currently reaches CUDA only through `memory_heap`, so it needs a way to build a pool over heaps that are not real allocations.
+3. **Benchmark.** `xmipp4-allocator-test` in the bundle is still written against the pre-rework API.
