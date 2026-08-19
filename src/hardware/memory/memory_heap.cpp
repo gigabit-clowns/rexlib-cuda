@@ -12,23 +12,21 @@ namespace xmipp4
 namespace cuda
 {
 
-memory_heap::~memory_heap() = default;
-
-
-
-device_memory_heap::device_memory_heap(int ordinal, std::size_t size)
-	: m_data(nullptr)
+memory_heap::memory_heap(void *data, std::size_t size, int ordinal) noexcept
+	: m_data(data)
 	, m_size(size)
 	, m_ordinal(ordinal)
 {
-	void *data = nullptr;
-	const device_guard guard(ordinal);
-	XMIPP4_CUDA_CHECK( cudaMalloc(&data, size) );
-	m_data = static_cast<byte*>(data);
 }
 
-device_memory_heap::~device_memory_heap()
+memory_heap::~memory_heap()
 {
+	if (m_ordinal == no_device)
+	{
+		XMIPP4_CUDA_CHECK_NO_THROW( cudaFreeHost(m_data) );
+		return;
+	}
+
 	// device_guard is not usable here, as it reports failures by throwing.
 	int previous = m_ordinal;
 	const bool restore =
@@ -46,53 +44,41 @@ device_memory_heap::~device_memory_heap()
 	}
 }
 
-byte* device_memory_heap::get_device_ptr() const noexcept
+void* memory_heap::get_device_ptr() const noexcept
 {
 	return m_data;
 }
 
-byte* device_memory_heap::get_host_ptr() const noexcept
+void* memory_heap::get_host_ptr() const noexcept
 {
-	return nullptr;
+	return m_ordinal == no_device ? m_data : nullptr;
 }
 
-std::size_t device_memory_heap::get_size() const noexcept
+std::size_t memory_heap::get_size() const noexcept
 {
 	return m_size;
 }
 
-
-
-pinned_memory_heap::pinned_memory_heap(int ordinal, std::size_t size)
-	: m_data(nullptr)
-	, m_size(size)
+std::shared_ptr<memory_heap>
+memory_heap::create_device_memory(int ordinal, std::size_t size)
 {
 	void *data = nullptr;
 	const device_guard guard(ordinal);
-	XMIPP4_CUDA_CHECK( cudaHostAlloc(&data, size, cudaHostAllocDefault) );
-	m_data = static_cast<byte*>(data);
+	XMIPP4_CUDA_CHECK( cudaMalloc(&data, size) );
+
+	return std::shared_ptr<memory_heap>(new memory_heap(data, size, ordinal));
 }
 
-pinned_memory_heap::~pinned_memory_heap()
+std::shared_ptr<memory_heap> memory_heap::create_pinned_memory(std::size_t size)
 {
-	// Pinned memory is process wide, so no device needs to be selected.
-	XMIPP4_CUDA_CHECK_NO_THROW( cudaFreeHost(m_data) );
-}
+	// Portable, so that the memory stays pinned for every device and not only
+	// for whichever one happened to be current here.
+	void *data = nullptr;
+	XMIPP4_CUDA_CHECK(
+		cudaHostAlloc(&data, size, cudaHostAllocPortable)
+	);
 
-byte* pinned_memory_heap::get_device_ptr() const noexcept
-{
-	// Unified addressing makes the host pointer valid on the device too.
-	return m_data;
-}
-
-byte* pinned_memory_heap::get_host_ptr() const noexcept
-{
-	return m_data;
-}
-
-std::size_t pinned_memory_heap::get_size() const noexcept
-{
-	return m_size;
+	return std::shared_ptr<memory_heap>(new memory_heap(data, size, no_device));
 }
 
 } // namespace cuda

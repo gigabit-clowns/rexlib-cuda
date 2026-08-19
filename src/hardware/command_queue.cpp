@@ -50,6 +50,17 @@ void command_queue::synchronize() const
 	XMIPP4_CUDA_CHECK( cudaStreamSynchronize(m_stream) );
 }
 
+command_queue* command_queue::try_cast(xmipp4::command_queue &queue) noexcept
+{
+	return dynamic_cast<command_queue*>(&queue);
+}
+
+const command_queue*
+command_queue::try_cast(const xmipp4::command_queue &queue) noexcept
+{
+	return dynamic_cast<const command_queue*>(&queue);
+}
+
 void command_queue::submit(const command &cmd)
 {
 	if (!cmd.get_program())

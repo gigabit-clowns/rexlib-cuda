@@ -4,7 +4,9 @@
 
 #include <xmipp4/core/hardware/device_backend.hpp>
 
-#include "memory/memory_resource_registry.hpp"
+#include <map>
+#include <memory>
+#include <mutex>
 
 namespace xmipp4
 {
@@ -13,6 +15,9 @@ class device_manager;
 
 namespace cuda
 {
+
+class device_memory_resource;
+class pinned_memory_resource;
 
 /**
  * @brief Implementation of the @ref xmipp4::device_backend interface to
@@ -37,7 +42,12 @@ public:
 	static bool register_at(xmipp4::device_manager &manager);
 
 private:
-	mutable memory_resource_registry m_resources;
+	// Every handle on a device shares its resources, or the allocators behind
+	// them would each hold their own cache of the same memory.
+	mutable std::mutex m_mutex;
+	mutable std::map<int, std::shared_ptr<device_memory_resource>>
+		m_device_memory;
+	mutable std::shared_ptr<pinned_memory_resource> m_pinned_memory;
 };
 
 } // namespace cuda

@@ -2,9 +2,8 @@
 
 #pragma once
 
-#include <xmipp4/core/memory/byte.hpp>
-
 #include <cstddef>
+#include <memory>
 
 namespace xmipp4
 {
@@ -21,64 +20,49 @@ namespace cuda
 class memory_heap
 {
 public:
-	memory_heap() noexcept = default;
 	memory_heap(const memory_heap &other) = delete;
 	memory_heap(memory_heap &&other) = delete;
-	virtual ~memory_heap();
+	~memory_heap();
 
 	memory_heap& operator=(const memory_heap &other) = delete;
 	memory_heap& operator=(memory_heap &&other) = delete;
 
-	virtual byte* get_device_ptr() const noexcept = 0;
+	void* get_device_ptr() const noexcept;
 
 	/**
 	 * @brief Get the host accessible pointer to the start of the heap.
 	 *
-	 * @return byte* The pointer, or nullptr when the heap cannot be reached
+	 * @return void* The pointer, or nullptr when the heap cannot be reached
 	 * from the host.
 	 */
-	virtual byte* get_host_ptr() const noexcept = 0;
+	void* get_host_ptr() const noexcept;
 
-	virtual std::size_t get_size() const noexcept = 0;
-};
+	std::size_t get_size() const noexcept;
 
-/**
- * @brief Heap backed by cudaMalloc. Not reachable from the host.
- */
-class device_memory_heap final
-	: public memory_heap
-{
-public:
-	device_memory_heap(int ordinal, std::size_t size);
-	~device_memory_heap() override;
+	/**
+	 * @brief Allocate device memory on the given device.
+	 *
+	 * @throws error If the allocation fails.
+	 */
+	static std::shared_ptr<memory_heap>
+	create_device_memory(int ordinal, std::size_t size);
 
-	byte* get_device_ptr() const noexcept override;
-	byte* get_host_ptr() const noexcept override;
-	std::size_t get_size() const noexcept override;
+	/**
+	 * @brief Allocate page locked host memory, usable from every device.
+	 *
+	 * @throws error If the allocation fails.
+	 */
+	static std::shared_ptr<memory_heap> create_pinned_memory(std::size_t size);
 
 private:
-	byte *m_data;
+	memory_heap(void *data, std::size_t size, int ordinal) noexcept;
+
+	/// Held by pinned heaps, which do not belong to any single device.
+	static constexpr int no_device = -1;
+
+	void *m_data;
 	std::size_t m_size;
 	int m_ordinal;
-};
-
-/**
- * @brief Heap backed by cudaHostAlloc. Reachable from both sides.
- */
-class pinned_memory_heap final
-	: public memory_heap
-{
-public:
-	pinned_memory_heap(int ordinal, std::size_t size);
-	~pinned_memory_heap() override;
-
-	byte* get_device_ptr() const noexcept override;
-	byte* get_host_ptr() const noexcept override;
-	std::size_t get_size() const noexcept override;
-
-private:
-	byte *m_data;
-	std::size_t m_size;
 };
 
 } // namespace cuda

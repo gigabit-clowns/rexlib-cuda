@@ -4,12 +4,15 @@
 
 #include "device.hpp"
 #include "error.hpp"
+#include "memory/device_memory_resource.hpp"
+#include "memory/pinned_memory_resource.hpp"
 
 #include "../config.hpp"
 
 #include <xmipp4/core/hardware/device_manager.hpp>
 
 #include <cstdlib>
+#include <mutex>
 #include <iomanip>
 #include <numeric>
 #include <sstream>
@@ -135,11 +138,20 @@ device_backend::create_device(std::size_t id) const
 		throw std::invalid_argument("Invalid device id");
 	}
 
-	return std::make_shared<device>(
-		ordinal,
-		m_resources.get_device_memory(ordinal),
-		m_resources.get_pinned_memory(ordinal)
-	);
+	const std::lock_guard<std::mutex> lock(m_mutex);
+
+	auto &device_memory = m_device_memory[ordinal];
+	if (!device_memory)
+	{
+		device_memory = std::make_shared<device_memory_resource>(ordinal);
+	}
+
+	if (!m_pinned_memory)
+	{
+		m_pinned_memory = std::make_shared<pinned_memory_resource>();
+	}
+
+	return std::make_shared<device>(ordinal, device_memory, m_pinned_memory);
 }
 
 bool device_backend::register_at(xmipp4::device_manager &manager)

@@ -301,6 +301,89 @@ TEST_CASE( "allocate on a CUDA device", "[cuda]" )
 	}
 }
 
+TEST_CASE( "reuse the memory a released buffer was using", "[cuda]" )
+{
+	plugin_manager manager;
+	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+
+	service_catalog catalog;
+	register_all_plugins_at(manager, catalog);
+
+	const auto device_manager = catalog.get_service_manager<xmipp4::device_manager>();
+	auto *backend = device_manager->get_backend("cuda");
+	REQUIRE( backend != nullptr );
+
+	std::vector<std::size_t> ids;
+	backend->enumerate_devices(ids);
+	if (ids.empty())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	const auto dev = backend->create_device(ids.front());
+	const auto allocator =
+		dev->get_memory_resource(memory_resource_affinity::host)
+		   .create_allocator();
+
+	// Pinned memory is the only one whose address the framework can observe,
+	// which is what makes the reuse visible from here.
+	const void *first = nullptr;
+	{
+		const auto buf = allocator->allocate(64 * 1024, 256, nullptr);
+		first = buf->get_host_ptr();
+		REQUIRE( first != nullptr );
+	}
+
+	const auto second = allocator->allocate(64 * 1024, 256, nullptr);
+	REQUIRE( second->get_host_ptr() == first );
+
+	// Nothing was handed back to the driver, so a long cycle neither grows
+	// without bound nor runs out of memory.
+	for (std::size_t i = 0; i < 4096; ++i)
+	{
+		const auto buf = allocator->allocate(256 * 1024, 256, nullptr);
+		REQUIRE( buf->get_host_ptr() != nullptr );
+	}
+}
+
+TEST_CASE( "serve many device allocations from the cache", "[cuda]" )
+{
+	plugin_manager manager;
+	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+
+	service_catalog catalog;
+	register_all_plugins_at(manager, catalog);
+
+	const auto device_manager = catalog.get_service_manager<xmipp4::device_manager>();
+	auto *backend = device_manager->get_backend("cuda");
+	REQUIRE( backend != nullptr );
+
+	std::vector<std::size_t> ids;
+	backend->enumerate_devices(ids);
+	if (ids.empty())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	const auto dev = backend->create_device(ids.front());
+	const auto allocator =
+		dev->get_memory_resource(memory_resource_affinity::device)
+		   .create_allocator();
+
+	// Far more than the card holds if none of it were ever reused.
+	std::vector<std::shared_ptr<xmipp4::buffer>> buffers;
+	for (std::size_t i = 0; i < 512; ++i)
+	{
+		buffers.clear();
+		for (std::size_t j = 0; j < 32; ++j)
+		{
+			buffers.push_back(allocator->allocate(1 << 20, 256, nullptr));
+		}
+	}
+
+	REQUIRE( buffers.size() == 32 );
+}
+
 TEST_CASE( "build a device session on a CUDA device", "[cuda]" )
 {
 	plugin_manager manager;

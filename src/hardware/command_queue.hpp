@@ -39,6 +39,15 @@ public:
 	 */
 	void synchronize() const;
 
+	/**
+	 * @brief Downcast a queue to this backend's implementation.
+	 *
+	 * @return command_queue* The same queue, or nullptr when another backend
+	 * produced it.
+	 */
+	static command_queue* try_cast(xmipp4::command_queue &queue) noexcept;
+	static const command_queue* try_cast(const xmipp4::command_queue &queue) noexcept;
+
 	void submit(const command &cmd) override;
 	void signal(xmipp4::event &ev) override;
 	void wait(const xmipp4::event &ev) override;

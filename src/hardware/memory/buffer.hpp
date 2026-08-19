@@ -2,35 +2,39 @@
 
 #pragma once
 
+#include "../../config.hpp"
+
 #include <xmipp4/core/hardware/buffer.hpp>
-#include <xmipp4/core/memory/byte.hpp>
 
 #include <memory>
+
+#include <boost/container/small_vector.hpp>
 
 namespace xmipp4
 {
 namespace cuda
 {
 
-class memory_heap;
-class memory_resource;
+class block_recycler;
+class command_queue;
+class memory_block;
 
 /**
- * @brief A range of a @ref memory_heap handed out as a framework buffer.
+ * @brief A range of a memory heap handed out as a framework buffer.
  *
- * The buffer keeps both the heap and the resource alive, so it stays valid
- * for as long as it is held, no matter what happens to the device or the
- * session it came from.
+ * The buffer also records which queues have been given work on it, so that
+ * the allocator knows what it has to wait for before handing the range out
+ * again. Queues are recorded by @ref command_queue::submit and only when
+ * they are not the one the range was allocated for.
  */
 class buffer final
 	: public xmipp4::buffer
 {
 public:
 	buffer(
-		std::shared_ptr<const memory_resource> resource,
-		std::shared_ptr<memory_heap> heap,
-		std::size_t offset,
-		std::size_t size
+		std::shared_ptr<const xmipp4::memory_resource> resource,
+		std::shared_ptr<block_recycler> recycler,
+		memory_block &block
 	) noexcept;
 	~buffer() override;
 
@@ -39,7 +43,12 @@ public:
 	std::size_t get_size() const noexcept override;
 	const xmipp4::memory_resource& get_memory_resource() const noexcept override;
 
-	byte* get_device_ptr() const noexcept;
+	void* get_device_ptr() const noexcept;
+
+	/**
+	 * @brief Take note that @p queue has been given work on this buffer.
+	 */
+	void record_queue(command_queue &queue);
 
 	/**
 	 * @brief Downcast a buffer to this backend's implementation.
@@ -51,10 +60,15 @@ public:
 	static const buffer* try_cast(const xmipp4::buffer &buf) noexcept;
 
 private:
-	std::shared_ptr<const memory_resource> m_resource;
-	std::shared_ptr<memory_heap> m_heap;
-	std::size_t m_offset;
-	std::size_t m_size;
+	using queue_vector_type = boost::container::small_vector<
+		command_queue*,
+		XMIPP4_CUDA_SMALL_QUEUE_COUNT
+	>;
+
+	std::shared_ptr<const xmipp4::memory_resource> m_resource;
+	std::shared_ptr<block_recycler> m_recycler;
+	memory_block *m_block;
+	queue_vector_type m_queues;
 };
 
 } // namespace cuda

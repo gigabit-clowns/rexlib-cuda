@@ -2,51 +2,75 @@
 
 #include "buffer.hpp"
 
+#include "caching_memory_allocator.hpp"
+#include "memory_block.hpp"
 #include "memory_heap.hpp"
-#include "memory_resource.hpp"
+
+#include "../command_queue.hpp"
+#include "../../logger.hpp"
 
 #include <xmipp4/core/platform/assert.hpp>
+
+#include <algorithm>
 
 namespace xmipp4
 {
 namespace cuda
 {
 
-static byte* offset_pointer(byte *base, std::size_t offset) noexcept
+static void* offset_pointer(void *base, std::size_t offset) noexcept
 {
-	return base ? base + offset : nullptr;
+	return base ? static_cast<char*>(base) + offset : nullptr;
 }
 
 
 
 buffer::buffer(
-	std::shared_ptr<const memory_resource> resource,
-	std::shared_ptr<memory_heap> heap,
-	std::size_t offset,
-	std::size_t size
+	std::shared_ptr<const xmipp4::memory_resource> resource,
+	std::shared_ptr<block_recycler> recycler,
+	memory_block &block
 ) noexcept
 	: m_resource(std::move(resource))
-	, m_heap(std::move(heap))
-	, m_offset(offset)
-	, m_size(size)
+	, m_recycler(std::move(recycler))
+	, m_block(&block)
 {
 }
 
-buffer::~buffer() = default;
+buffer::~buffer()
+{
+	XMIPP4_ASSERT( m_recycler );
+	try
+	{
+		m_recycler->recycle_block(
+			*m_block,
+			span<command_queue *const>(m_queues.data(), m_queues.size())
+		);
+	}
+	catch (const std::exception &e)
+	{
+		log_error(e.what());
+	}
+}
 
 void* buffer::get_host_ptr() noexcept
 {
-	return offset_pointer(m_heap->get_host_ptr(), m_offset);
+	return offset_pointer(
+		m_block->get_heap()->get_host_ptr(),
+		m_block->get_offset()
+	);
 }
 
 const void* buffer::get_host_ptr() const noexcept
 {
-	return offset_pointer(m_heap->get_host_ptr(), m_offset);
+	return offset_pointer(
+		m_block->get_heap()->get_host_ptr(),
+		m_block->get_offset()
+	);
 }
 
 std::size_t buffer::get_size() const noexcept
 {
-	return m_size;
+	return m_block->get_size();
 }
 
 const xmipp4::memory_resource& buffer::get_memory_resource() const noexcept
@@ -55,9 +79,28 @@ const xmipp4::memory_resource& buffer::get_memory_resource() const noexcept
 	return *m_resource;
 }
 
-byte* buffer::get_device_ptr() const noexcept
+void* buffer::get_device_ptr() const noexcept
 {
-	return offset_pointer(m_heap->get_device_ptr(), m_offset);
+	return offset_pointer(
+		m_block->get_heap()->get_device_ptr(),
+		m_block->get_offset()
+	);
+}
+
+void buffer::record_queue(command_queue &queue)
+{
+	// The queue the range was allocated for orders its own work, so only the
+	// others have to be waited for.
+	if (&queue == m_block->get_queue())
+	{
+		return;
+	}
+
+	const auto ite = std::find(m_queues.cbegin(), m_queues.cend(), &queue);
+	if (ite == m_queues.cend())
+	{
+		m_queues.push_back(&queue);
+	}
 }
 
 buffer* buffer::try_cast(xmipp4::buffer &buf) noexcept

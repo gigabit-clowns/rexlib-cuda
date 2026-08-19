@@ -2,10 +2,9 @@
 
 #include "pinned_memory_resource.hpp"
 
+#include "caching_memory_allocator.hpp"
 #include "memory_heap.hpp"
 
-#include "../device_guard.hpp"
-#include "../error.hpp"
 #include "../../config.hpp"
 
 #include <cuda_runtime.h>
@@ -15,21 +14,26 @@ namespace xmipp4
 namespace cuda
 {
 
-pinned_memory_resource::pinned_memory_resource(int ordinal)
-	: memory_resource(ordinal)
-	, m_kind(memory_resource_kind::host_staging)
+static memory_resource_kind probe_kind() noexcept
 {
+	// Where the host and the device share physical memory there is nothing to
+	// stage through. Device zero speaks for the system: a machine mixing an
+	// integrated device with a discrete one is not worth modelling here.
 	cudaDeviceProp properties;
-	XMIPP4_CUDA_CHECK( cudaGetDeviceProperties(&properties, ordinal) );
-	if (properties.integrated)
+	if (cudaGetDeviceProperties(&properties, 0) == cudaSuccess &&
+		properties.integrated)
 	{
-		m_kind = memory_resource_kind::unified;
+		return memory_resource_kind::unified;
 	}
+
+	return memory_resource_kind::host_staging;
 }
 
-memory_resource_kind pinned_memory_resource::get_kind() const noexcept
+
+
+pinned_memory_resource::pinned_memory_resource() noexcept
+	: m_kind(probe_kind())
 {
-	return m_kind;
 }
 
 std::size_t pinned_memory_resource::get_max_alignment() const noexcept
@@ -40,7 +44,27 @@ std::size_t pinned_memory_resource::get_max_alignment() const noexcept
 std::shared_ptr<memory_heap>
 pinned_memory_resource::create_heap(std::size_t size) const
 {
-	return std::make_shared<pinned_memory_heap>(get_ordinal(), size);
+	return memory_heap::create_pinned_memory(size);
+}
+
+memory_resource_kind pinned_memory_resource::get_kind() const noexcept
+{
+	return m_kind;
+}
+
+std::shared_ptr<memory_allocator>
+pinned_memory_resource::create_allocator() const
+{
+	auto result = m_allocator.lock();
+	if (!result)
+	{
+		result = std::make_shared<
+			caching_memory_allocator<pinned_memory_resource>
+		>(shared_from_this(), XMIPP4_CUDA_PINNED_HEAP_STEP_BYTES);
+		m_allocator = result;
+	}
+
+	return result;
 }
 
 } // namespace cuda
