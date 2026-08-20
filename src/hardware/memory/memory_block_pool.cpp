@@ -83,12 +83,13 @@ memory_block_pool::partition_block(
 	XMIPP4_ASSERT( block );
 	XMIPP4_ASSERT( block->is_free() );
 
-	auto *first = new memory_block(
+	auto owned_first = std::make_unique<memory_block>(
 		block->get_queue(),
 		size1,
 		block->get_heap(),
 		block->get_offset()
 	);
+	auto *first = owned_first.release();
 
 	m_free_blocks.erase(m_free_blocks.iterator_to(*block));
 	auto *second = block;

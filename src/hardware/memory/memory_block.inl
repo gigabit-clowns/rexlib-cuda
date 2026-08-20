@@ -63,23 +63,5 @@ bool memory_block::is_free() const noexcept
 	return free_block_set_hook.is_linked();
 }
 
-
-
-inline
-bool operator==(const memory_block &lhs, const memory_block &rhs) noexcept
-{
-	return
-		lhs.get_heap() == rhs.get_heap() &&
-		lhs.get_offset() == rhs.get_offset() &&
-		lhs.get_size() == rhs.get_size() &&
-		lhs.get_queue() == rhs.get_queue() ;
-}
-
-inline
-bool operator!=(const memory_block &lhs, const memory_block &rhs) noexcept
-{
-	return !(lhs == rhs);
-}
-
 } // namespace cuda
 } // namespace xmipp4

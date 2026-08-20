@@ -19,7 +19,16 @@ namespace cuda
  */
 class memory_heap
 {
+private:
+	struct construction_key {};
+
 public:
+	memory_heap(
+		construction_key,
+		void *data,
+		std::size_t size,
+		int ordinal
+	) noexcept;
 	memory_heap(const memory_heap &other) = delete;
 	memory_heap(memory_heap &&other) = delete;
 	~memory_heap();
@@ -55,8 +64,6 @@ public:
 	static std::shared_ptr<memory_heap> create_pinned_memory(std::size_t size);
 
 private:
-	memory_heap(void *data, std::size_t size, int ordinal) noexcept;
-
 	/// Held by pinned heaps, which do not belong to any single device.
 	static constexpr int no_device = -1;
 

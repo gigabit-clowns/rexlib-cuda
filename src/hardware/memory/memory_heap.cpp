@@ -12,7 +12,12 @@ namespace xmipp4
 namespace cuda
 {
 
-memory_heap::memory_heap(void *data, std::size_t size, int ordinal) noexcept
+memory_heap::memory_heap(
+	construction_key,
+	void *data,
+	std::size_t size,
+	int ordinal
+) noexcept
 	: m_data(data)
 	, m_size(size)
 	, m_ordinal(ordinal)
@@ -66,7 +71,9 @@ memory_heap::create_device_memory(int ordinal, std::size_t size)
 	const device_guard guard(ordinal);
 	XMIPP4_CUDA_CHECK( cudaMalloc(&data, size) );
 
-	return std::shared_ptr<memory_heap>(new memory_heap(data, size, ordinal));
+	return std::make_shared<memory_heap>(
+		construction_key(), data, size, ordinal
+	);
 }
 
 std::shared_ptr<memory_heap> memory_heap::create_pinned_memory(std::size_t size)
@@ -78,7 +85,9 @@ std::shared_ptr<memory_heap> memory_heap::create_pinned_memory(std::size_t size)
 		cudaHostAlloc(&data, size, cudaHostAllocPortable)
 	);
 
-	return std::shared_ptr<memory_heap>(new memory_heap(data, size, no_device));
+	return std::make_shared<memory_heap>(
+		construction_key(), data, size, no_device
+	);
 }
 
 } // namespace cuda

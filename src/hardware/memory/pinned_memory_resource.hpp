@@ -27,8 +27,6 @@ class pinned_memory_resource final
 	, public std::enable_shared_from_this<pinned_memory_resource>
 {
 public:
-	pinned_memory_resource() noexcept;
-
 	std::size_t get_max_alignment() const noexcept;
 	std::shared_ptr<memory_heap> create_heap(std::size_t size) const;
 
@@ -36,7 +34,6 @@ public:
 	std::shared_ptr<memory_allocator> create_allocator() const override;
 
 private:
-	memory_resource_kind m_kind;
 	mutable std::weak_ptr<memory_allocator> m_allocator;
 };
 

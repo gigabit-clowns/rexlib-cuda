@@ -31,11 +31,6 @@ static memory_resource_kind probe_kind() noexcept
 
 
 
-pinned_memory_resource::pinned_memory_resource() noexcept
-	: m_kind(probe_kind())
-{
-}
-
 std::size_t pinned_memory_resource::get_max_alignment() const noexcept
 {
 	return XMIPP4_CUDA_COALESCE_ALIGN_BYTES;
@@ -49,7 +44,8 @@ pinned_memory_resource::create_heap(std::size_t size) const
 
 memory_resource_kind pinned_memory_resource::get_kind() const noexcept
 {
-	return m_kind;
+	static const memory_resource_kind kind = probe_kind();
+	return kind;
 }
 
 std::shared_ptr<memory_allocator>

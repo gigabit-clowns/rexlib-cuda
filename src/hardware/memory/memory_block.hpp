@@ -13,6 +13,7 @@ namespace cuda
 {
 
 class command_queue;
+class memory_block_pool;
 class memory_heap;
 
 /**
@@ -25,13 +26,9 @@ class memory_heap;
  */
 class memory_block
 {
+	friend class memory_block_pool;
+
 public:
-	using block_list_hook_type = boost::intrusive::list_member_hook<>;
-	using free_block_set_hook_type = boost::intrusive::set_member_hook<>;
-
-	block_list_hook_type block_list_hook;
-	free_block_set_hook_type free_block_set_hook;
-
 	memory_block(
 		const command_queue *queue,
 		std::size_t size,
@@ -52,14 +49,17 @@ public:
 	bool is_free() const noexcept;
 
 private:
+	using block_list_hook_type = boost::intrusive::list_member_hook<>;
+	using free_block_set_hook_type = boost::intrusive::set_member_hook<>;
+
+	block_list_hook_type block_list_hook;
+	free_block_set_hook_type free_block_set_hook;
+
 	const command_queue *m_queue;
 	std::size_t m_size;
 	memory_heap *m_heap;
 	std::size_t m_offset;
 };
-
-bool operator==(const memory_block &lhs, const memory_block &rhs) noexcept;
-bool operator!=(const memory_block &lhs, const memory_block &rhs) noexcept;
 
 } // namespace cuda
 } // namespace xmipp4
