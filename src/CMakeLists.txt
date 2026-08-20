@@ -33,6 +33,9 @@ target_link_libraries(
 	PUBLIC
 		xmipp4-core
 		CUDA::cudart
+		Boost::container
+		Boost::intrusive
+		Boost::unordered
 )
 
 # Enable all warnings during compilation
