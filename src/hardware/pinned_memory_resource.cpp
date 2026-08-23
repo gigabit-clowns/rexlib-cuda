@@ -13,18 +13,12 @@ namespace xmipp4
 namespace cuda
 {
 
-/**
- * @brief Work out what page locked host memory is on this machine.
- *
- * It is the memory the devices compute out of only where every one of them
- * shares the host's, and a staging area to transfer through otherwise. A
- * machine with no device at all has nothing to share with, and one mixing both
- * sorts of device is answered conservatively: those that do share lose an
- * optimization, rather than every buffer being promised an accessibility that
- * does not hold for all of them.
- *
- * @return memory_resource_kind What the memory is.
- */
+// Page locked memory is what the devices compute out of only where every one
+// of them shares the host's, and a staging area to transfer through otherwise.
+// A machine with no device at all has nothing to share with, and one mixing
+// both sorts of device is answered conservatively: those that do share lose an
+// optimization, rather than every buffer being promised an accessibility that
+// does not hold for all of them.
 static memory_resource_kind query_pinned_memory_kind() noexcept
 {
 	int count;
@@ -67,14 +61,13 @@ memory_resource_kind pinned_memory_resource::get_kind() const noexcept
 std::shared_ptr<memory_allocator>
 pinned_memory_resource::create_allocator() const
 {
+	// Mapping page locked memory into the device address space is only
+	// worth what it costs where the device would otherwise have to
+	// transfer it, which is exactly where it does not share it.
+	const bool mapped = (m_kind == memory_resource_kind::unified);
 	return std::make_shared<caching_memory_allocator>(
 		*this,
-		// Mapping page locked memory into the device address space is only
-		// worth what it costs where the device would otherwise have to
-		// transfer it, which is exactly where it does not share it.
-		std::make_unique<pinned_memory_source>(
-			m_kind == memory_resource_kind::unified
-		),
+		std::make_unique<pinned_memory_source>(mapped),
 		std::make_shared<pooled_event_recorder>()
 	);
 }

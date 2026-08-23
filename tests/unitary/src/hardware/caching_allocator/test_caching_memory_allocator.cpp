@@ -26,8 +26,10 @@ using namespace xmipp4;
 namespace
 {
 
-constexpr std::size_t alignment = XMIPP4_CUDA_CACHING_ALLOCATOR_MAX_ALIGNMENT_BYTES;
-constexpr std::size_t min_heap = XMIPP4_CUDA_CACHING_ALLOCATOR_MIN_HEAP_BYTES;
+constexpr std::size_t alignment =
+	XMIPP4_CUDA_CACHING_ALLOCATOR_MAX_ALIGNMENT_BYTES;
+constexpr std::size_t min_heap =
+	XMIPP4_CUDA_CACHING_ALLOCATOR_MIN_HEAP_BYTES;
 
 void* device_ptr_of(const std::shared_ptr<xmipp4::buffer> &buf)
 {
@@ -295,7 +297,8 @@ TEST_CASE(
 {
 	cuda::allocator_fixture fixture;
 	const auto queue = cuda::make_test_queue(0);
-	const std::size_t size = XMIPP4_CUDA_CACHING_ALLOCATOR_LARGE_ALLOCATION_BYTES;
+	const std::size_t size =
+		XMIPP4_CUDA_CACHING_ALLOCATOR_LARGE_ALLOCATION_BYTES;
 
 	// Sized to the request rather than rounded up, since a heap this big would
 	// otherwise sit there holding memory nothing else is small enough to use.
@@ -351,7 +354,11 @@ TEST_CASE(
 	REQUIRE_CALL(fixture.get_source(), allocate(trompeloeil::_))
 		.LR_RETURN(fixture.get_arena().take(_1));
 
-	auto buf = fixture.get().allocate(min_heap, alignment, cuda::queue_handle());
+	auto buf = fixture.get().allocate(
+		min_heap,
+		alignment,
+		cuda::queue_handle()
+	);
 
 	CHECK( buf != nullptr );
 }

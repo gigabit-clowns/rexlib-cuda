@@ -108,7 +108,9 @@ public:
 		, m_release_expectation(
 			NAMED_ALLOW_CALL(m_recorder, release(trompeloeil::_))
 		)
-		, m_deferred(std::make_shared<cuda::event_recorder_reference>(m_recorder))
+		, m_deferred(
+			std::make_shared<cuda::event_recorder_reference>(m_recorder)
+		)
 	{
 	}
 

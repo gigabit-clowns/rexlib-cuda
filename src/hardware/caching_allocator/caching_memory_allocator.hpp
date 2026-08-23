@@ -59,8 +59,9 @@ public:
 	 *
 	 * @throws std::invalid_argument If @p source or @p recorder is nullptr.
 	 *
-	 * @note The buffers it hands out keep it alive, so it has to be owned by a
-	 * @c shared_ptr. Allocating from one that is not throws @c std::bad_weak_ptr.
+	 * @note The buffers it hands out keep it alive, so it has to be owned by
+	 * a @c shared_ptr. Allocating from one that is not throws
+	 * @c std::bad_weak_ptr.
 	 */
 	caching_memory_allocator(
 		const memory_resource &resource,

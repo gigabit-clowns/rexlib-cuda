@@ -317,9 +317,15 @@ caching_memory_allocator::get_heap_size(std::size_t size) const noexcept
 	// Doubling means a workload that keeps growing stops reaching the driver
 	// after a handful of allocations, rather than once per allocation.
 	auto result = std::max<std::size_t>(m_pool.get_size(), size);
-	result = std::max<std::size_t>(result, XMIPP4_CUDA_CACHING_ALLOCATOR_MIN_HEAP_BYTES);
-	result = std::min<std::size_t>(result, XMIPP4_CUDA_CACHING_ALLOCATOR_MAX_HEAP_BYTES);
-	result = align_ceil(result, XMIPP4_CUDA_CACHING_ALLOCATOR_MAX_ALIGNMENT_BYTES);
+	result = std::max<std::size_t>(
+		result,
+		XMIPP4_CUDA_CACHING_ALLOCATOR_MIN_HEAP_BYTES
+	);
+	result = std::min<std::size_t>(
+		result,
+		XMIPP4_CUDA_CACHING_ALLOCATOR_MAX_HEAP_BYTES
+	);
+	result = align_ceil(result, get_max_alignment());
 
 	// The clamp above is about how eagerly to grow, never about refusing a
 	// request that is bigger than that.
