@@ -17,9 +17,11 @@ using namespace xmipp4;
 namespace
 {
 
-/// Stands in for whatever the driver would have handed out. Over-aligned so
-/// that a test can pick a base with exactly the alignment it wants to study.
-alignas(8192) std::byte storage[16384];
+/// Stands in for whatever the driver would have handed out. Aligned past what
+/// the sources below promise, so that a test can pick a base that is not, and
+/// deliberately no further: MSVC refuses to link a section aligned beyond the
+/// page the image is laid out in.
+alignas(1024) std::byte storage[8192];
 
 } // namespace
 
@@ -59,20 +61,20 @@ TEST_CASE(
 
 	// Moving the base forwards eats into the region, so the difference between
 	// the two alignments has to be paid for up front.
-	REQUIRE_CALL(source, allocate(1024u + 4096u - 256u))
+	REQUIRE_CALL(source, allocate(512u + 1024u - 256u))
 		.RETURN(region);
 	ALLOW_CALL(source, deallocate(region));
 
-	const cuda::memory_heap heap(source, 1024, 4096);
+	const cuda::memory_heap heap(source, 512, 1024);
 
-	CHECK( is_aligned(heap.get_data(), 4096) );
-	CHECK( heap.get_size() == 1024 );
+	CHECK( is_aligned(heap.get_data(), 1024) );
+	CHECK( heap.get_size() == 512 );
 
 	// Every usable byte still has to lie inside what was actually taken.
 	const auto first = reinterpret_cast<std::uintptr_t>(heap.get_data());
 	const auto region_first = reinterpret_cast<std::uintptr_t>(region);
 	CHECK( first >= region_first );
-	CHECK( first + heap.get_size() <= region_first + 1024 + 4096 - 256 );
+	CHECK( first + heap.get_size() <= region_first + 512 + 1024 - 256 );
 }
 
 TEST_CASE(
@@ -85,7 +87,7 @@ TEST_CASE(
 	auto *region = storage;
 
 	ALLOW_CALL(source, get_base_alignment())
-		.RETURN(4096);
+		.RETURN(1024);
 	REQUIRE_CALL(source, allocate(1024u))
 		.RETURN(region);
 	ALLOW_CALL(source, deallocate(region));
