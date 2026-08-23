@@ -8,10 +8,8 @@ file(
 		${CMAKE_CURRENT_SOURCE_DIR}/*.c
 )
 
-# Usage requirements shared by everything that is built out of the plugin's
-# objects: the object library itself, the plugin and the unitary tests.
-# $<TARGET_OBJECTS:> only carries the objects, so consumers pick these up from
-# here instead.
+# $<TARGET_OBJECTS:> carries only the objects, so what is built from them
+# picks up their usage requirements here instead.
 set(DEPS_NAME ${PROJECT_NAME}-deps)
 add_library(${DEPS_NAME} INTERFACE)
 target_link_libraries(

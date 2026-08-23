@@ -489,8 +489,7 @@ TEST_CASE(
 			.THROW(std::runtime_error("no answer"));
 
 		// Giving the reached one back here would leave the block waiting for a
-		// subset of what it was waiting for, which is indistinguishable from
-		// having been told those queues caught up.
+		// subset of what it was waiting for.
 		FORBID_CALL(recorder, release(trompeloeil::_));
 
 		CHECK_THROWS_AS(

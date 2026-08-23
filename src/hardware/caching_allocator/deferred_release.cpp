@@ -95,10 +95,8 @@ void deferred_release::process(memory_block_pool &pool)
 
 void deferred_release::wait_all(memory_block_pool &pool)
 {
-	// Each block leaves the list as it goes back, rather than the list being
-	// cleared once every one of them has. A wait failing part way through would
-	// otherwise leave the blocks that already reached the pool listed as still
-	// held back, and the next drain would hand them over a second time.
+	// Each block leaves the list as it goes back, so a wait failing part way
+	// through cannot have the next drain give the earlier ones back twice.
 	auto ite = m_pending.begin();
 	while (ite != m_pending.end())
 	{

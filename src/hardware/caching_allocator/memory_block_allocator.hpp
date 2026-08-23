@@ -139,10 +139,8 @@ private:
 
 	std::mutex m_mutex;
 
-	// The deferred release gives blocks back to the pool as it drains, the
-	// pool gives heaps back to the source, and the points the release is
-	// holding go back to the recorder. Declared in the order that makes them
-	// die the other way around.
+	// Each of these gives what it holds back to the one before it, so they are
+	// declared in the order that makes them die the other way around.
 	memory_block_pool m_pool;
 	deferred_release m_deferred;
 

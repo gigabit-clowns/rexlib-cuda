@@ -35,10 +35,8 @@ TEST_CASE(
 	{
 		const std::string message = e.what();
 
-		// The call is what says which of the many in a function failed, and
-		// where it was is what says which call that is. What the runtime says
-		// about the code is not checked: it is free to say nothing at all, and
-		// does on some platforms.
+		// Not what the runtime says about the code: it is free to say nothing at
+		// all, and does on some platforms.
 		CHECK( message.find("cudaErrorInvalidValue") != std::string::npos );
 		CHECK( message.find(__FILE__) != std::string::npos );
 		CHECK_FALSE( message.empty() );
@@ -52,9 +50,8 @@ TEST_CASE(
 {
 	CHECK_NOTHROW( XMIPP4_CUDA_CHECK_ALLOCATION(cudaSuccess) );
 
-	// The allocators tell "the device has no memory left", which they answer
-	// by asking for less or by giving back what they are holding, apart from
-	// every other failure, by its type alone.
+	// The allocators answer "no memory left" by asking for less, and tell it
+	// from every other failure by its type alone.
 	CHECK_THROWS_AS(
 		XMIPP4_CUDA_CHECK_ALLOCATION(cudaErrorMemoryAllocation),
 		std::bad_alloc
@@ -92,9 +89,8 @@ TEST_CASE(
 	"[error]"
 )
 {
-	// The runtime is free to answer with nothing at all for a code it does not
-	// recognize, and does on some platforms. Streaming that straight into the
-	// message reads past a null pointer.
+	// The runtime says nothing at all about some codes, and streaming that
+	// straight into the message reads past a null pointer.
 	const auto unrecognized = static_cast<cudaError_t>(0x7ffffff0);
 
 	try

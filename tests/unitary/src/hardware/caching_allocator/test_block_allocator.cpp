@@ -77,10 +77,8 @@ block_allocator_fixture::~block_allocator_fixture()
 	// gives every heap it is still holding back on the way out.
 	m_allocator.reset();
 
-	// Whatever a test did, an allocator that has been destroyed owes the
-	// driver and the recorder nothing. Checked once here rather than in every
-	// test. Skipped while an exception is on its way out, since the failure
-	// that caused it is the one worth reporting.
+	// A destroyed allocator owes the driver and the recorder nothing. Not while
+	// an exception is on its way out: that failure is the one to report.
 	if (std::uncaught_exceptions() == 0)
 	{
 		CHECK( m_arena.get_region_count() == 0 );
@@ -145,10 +143,8 @@ const queue_handle& block_allocator_fixture::get_captured_queue(
 
 void block_allocator_fixture::track(event_recorder::ticket ticket)
 {
-	// A test can answer record() itself, to pin the ticket that a later
-	// expectation names. The first this fixture then hears of that ticket is
-	// whatever the allocator does with it, so room is made for it here rather
-	// than reading past the end of what capture() handed out.
+	// A test can answer record() itself to pin a ticket capture() never made
+	// room for. Make it here rather than read past the end.
 	if (m_released.size() < ticket)
 	{
 		m_captured_queues.resize(ticket);
@@ -190,9 +186,8 @@ void block_allocator_fixture::give_back(event_recorder::ticket ticket)
 	track(ticket);
 	const auto index = ticket - 1;
 
-	// A point given back twice is a point that could be handed out again while
-	// something still holds it, which is worth failing over wherever it
-	// happens.
+	// A point given back twice could be handed out again while something still
+	// holds it.
 	m_released_twice = m_released_twice || m_released[index];
 	m_released[index] = true;
 }

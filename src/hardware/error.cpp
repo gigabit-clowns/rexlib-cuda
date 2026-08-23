@@ -13,9 +13,8 @@ namespace xmipp4
 namespace cuda
 {
 
-// The runtime has no description for every code it can be handed, and answers
-// with nothing at all for the ones it does not know. Streaming that reads past
-// a null pointer, so a code without a description gets one here.
+// The runtime answers with nothing at all for a code it does not know, and
+// streaming that reads past a null pointer.
 static const char* describe(cudaError_t code) noexcept
 {
 	const auto *result = cudaGetErrorString(code);

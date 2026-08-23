@@ -11,9 +11,8 @@ file(
 		${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
-# The plugin itself is a MODULE and cannot be linked against, so the tests
-# embed the same objects it is built from and pick up their usage requirements
-# from the shared interface target.
+# The plugin is a MODULE and cannot be linked against, so the tests embed
+# the same objects it is built from.
 add_executable(
 	${TESTS_NAME}
 	${TEST_SOURCES}
@@ -31,10 +30,8 @@ target_link_libraries(
 		trompeloeil::trompeloeil
 )
 
-# The embedded objects still import xmipp4-core, whose DLL lives in its own
-# install prefix and is not on the loader's search path. Unlike the integration
-# suite, which loads the plugin from its working directory, this executable is
-# started by the test discovery step, so the library has to sit next to it.
+# The embedded objects import xmipp4-core, whose DLL is not on the loader's
+# search path, so it has to sit next to the executable that needs it.
 if(WIN32)
 	add_custom_command(TARGET ${TESTS_NAME}
 		POST_BUILD
