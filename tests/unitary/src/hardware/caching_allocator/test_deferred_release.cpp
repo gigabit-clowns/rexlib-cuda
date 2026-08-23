@@ -398,3 +398,116 @@ TEST_CASE(
 
 	fixture.get_pool().release(block);
 }
+
+TEST_CASE(
+	"a deferred_release should give a block back once when waiting fails part "
+	"way through",
+	"[deferred_release]"
+)
+{
+	pool_fixture pool;
+	cuda::mock_event_recorder recorder;
+
+	const auto own = cuda::make_test_queue(0);
+	const auto other = cuda::make_test_queue(1);
+
+	// One heap each, so that the one that goes back cannot merge into the one
+	// that does not and stop being a block of its own.
+	auto &first = pool.acquire_block(1024, own);
+	auto &second = pool.acquire_block(1024, own);
+
+	trompeloeil::sequence sequence;
+	REQUIRE_CALL(recorder, record(other))
+		.RETURN(1)
+		.IN_SEQUENCE(sequence);
+	REQUIRE_CALL(recorder, record(other))
+		.RETURN(2)
+		.IN_SEQUENCE(sequence);
+	ALLOW_CALL(recorder, release(trompeloeil::_));
+
+	cuda::deferred_release deferred;
+	const std::array<cuda::queue_handle, 1> queues = {other};
+	deferred.defer(recorder, first, make_span(queues));
+	deferred.defer(recorder, second, make_span(queues));
+
+	// The first block's queue catches up; the second one's cannot be waited
+	// for at all.
+	ALLOW_CALL(recorder, wait(1u));
+	ALLOW_CALL(recorder, wait(2u))
+		.THROW(std::runtime_error("no answer"));
+
+	CHECK_THROWS_AS(
+		deferred.wait_all(pool.get()),
+		std::runtime_error
+	);
+
+	// The one that made it back is no longer held back, so the drain the owner
+	// still has to do cannot hand it to the pool a second time.
+	CHECK( first.is_free() );
+	CHECK_FALSE( second.is_free() );
+	CHECK( deferred.get_pending_count() == 1 );
+
+	ALLOW_CALL(recorder, wait(2u));
+	deferred.wait_all(pool.get());
+
+	CHECK( second.is_free() );
+	CHECK( deferred.get_pending_count() == 0 );
+}
+
+TEST_CASE(
+	"a deferred_release should leave a block waiting for every point it was "
+	"waiting for when one cannot be queried",
+	"[deferred_release]"
+)
+{
+	deferred_fixture fixture;
+	auto &recorder = fixture.get_recorder();
+	auto &deferred = fixture.get();
+
+	const auto own = cuda::make_test_queue(0);
+	const auto first = cuda::make_test_queue(1);
+	const auto second = cuda::make_test_queue(2);
+	auto &block = fixture.acquire_block(1024, own);
+
+	ALLOW_CALL(recorder, record(first))
+		.RETURN(1);
+	ALLOW_CALL(recorder, record(second))
+		.RETURN(2);
+
+	const std::array<cuda::queue_handle, 2> queues = {first, second};
+	deferred.defer(recorder, block, make_span(queues));
+
+	{
+		// The first point has been reached, the second cannot be asked about.
+		ALLOW_CALL(recorder, is_complete(1u))
+			.RETURN(true);
+		ALLOW_CALL(recorder, is_complete(2u))
+			.THROW(std::runtime_error("no answer"));
+
+		// Giving the reached one back here would leave the block waiting for a
+		// subset of what it was waiting for, which is indistinguishable from
+		// having been told those queues caught up.
+		FORBID_CALL(recorder, release(trompeloeil::_));
+
+		CHECK_THROWS_AS(
+			deferred.process(fixture.get_pool()),
+			std::runtime_error
+		);
+
+		CHECK( deferred.get_pending_count() == 1 );
+		CHECK_FALSE( block.is_free() );
+	}
+
+	// Both points are still there to be asked about once the driver answers.
+	REQUIRE_CALL(recorder, is_complete(1u))
+		.RETURN(true);
+	REQUIRE_CALL(recorder, is_complete(2u))
+		.RETURN(true);
+	REQUIRE_CALL(recorder, release(1u));
+	REQUIRE_CALL(recorder, release(2u));
+
+	deferred.process(fixture.get_pool());
+
+	CHECK( deferred.get_pending_count() == 0 );
+	CHECK( block.is_free() );
+}

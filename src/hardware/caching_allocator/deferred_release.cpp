@@ -95,17 +95,21 @@ void deferred_release::process(memory_block_pool &pool)
 
 void deferred_release::wait_all(memory_block_pool &pool)
 {
-	for (auto &item : m_pending)
+	// Each block leaves the list as it goes back, rather than the list being
+	// cleared once every one of them has. A wait failing part way through would
+	// otherwise leave the blocks that already reached the pool listed as still
+	// held back, and the next drain would hand them over a second time.
+	auto ite = m_pending.begin();
+	while (ite != m_pending.end())
 	{
-		for (const auto &ticket : item.tickets)
+		for (const auto &ticket : ite->tickets)
 		{
 			ticket.wait();
 		}
 
-		pool.release(*item.block);
+		pool.release(*ite->block);
+		ite = m_pending.erase(ite);
 	}
-
-	m_pending.clear();
 }
 
 std::size_t deferred_release::get_pending_count() const noexcept
