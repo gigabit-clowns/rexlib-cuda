@@ -20,18 +20,30 @@ jobs:
         cuda:
         - 12.8.1
         
+        build_type:
+        - Debug
+        
         include:
         - os: ubuntu-22.04
           compiler: {cc: gcc, cxx: g++}
           cuda: 11.8.0
+          build_type: Debug
         # Visual Studio 2026 is only supported from CUDA 13.2 onwards
         - os: windows-latest
           compiler: {cc: cl, cxx: cl}
           cuda: 13.3.1
+          # Release, unlike every other job, because xmipp4-core arrives here
+          # as a prebuilt wheel that is always built Release. On Windows that
+          # decides the C runtime, and a Debug build of this plugin would pair
+          # /MDd with the core's /MD: two C runtimes, two heaps, and a
+          # different layout for the std::string and std::vector that cross
+          # the core's DLL boundary. Building the core from source here would
+          # be what it takes to make this Debug too.
+          build_type: Release
   
     runs-on: ${{ matrix.os }}
     env:
-      BUILD_TYPE: Release
+      BUILD_TYPE: ${{ matrix.build_type }}
     defaults:
       run:
         shell: bash -el {0}
