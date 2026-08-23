@@ -47,6 +47,12 @@ void pinned_memory_source::deallocate(void *data) noexcept
 	XMIPP4_CUDA_CHECK_NO_THROW( cudaFreeHost(data) );
 }
 
+bool pinned_memory_source::is_host_accessible() const noexcept
+{
+	// Page locked memory lives in the host, which is the whole point of it.
+	return true;
+}
+
 std::size_t pinned_memory_source::get_base_alignment() const noexcept
 {
 	// Page-locked memory is page-aligned in practice, but only the same amount

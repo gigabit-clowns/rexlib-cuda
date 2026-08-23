@@ -10,6 +10,7 @@
 
 #include "mock/mock_event_recorder.hpp"
 #include "mock/mock_memory_source.hpp"
+#include "test_event_recorder_reference.hpp"
 #include "test_queue.hpp"
 
 #include <array>
@@ -91,10 +92,11 @@ private:
  * @brief A deferred release over a pool of blocks that exist only as
  * addresses.
  *
- * Waiting and giving tickets back are allowed throughout, since a deferred
- * release drains whatever it is still holding when it dies and every test
- * would otherwise have to say so. A test that is about those calls says so
- * itself, which takes precedence.
+ * Stands in for the owner a deferred release expects, draining it while there
+ * is still a pool to give the blocks back to. Waiting and giving tickets back
+ * are allowed throughout, since that drain causes both and every test would
+ * otherwise have to say so. A test that is about those calls says so itself,
+ * which takes precedence.
  */
 class deferred_fixture
 {
@@ -106,7 +108,7 @@ public:
 		, m_release_expectation(
 			NAMED_ALLOW_CALL(m_recorder, release(trompeloeil::_))
 		)
-		, m_deferred(m_pool.get(), m_recorder)
+		, m_deferred(std::make_shared<cuda::event_recorder_reference>(m_recorder))
 	{
 	}
 
@@ -118,6 +120,11 @@ public:
 	cuda::mock_event_recorder& get_recorder() noexcept
 	{
 		return m_recorder;
+	}
+
+	~deferred_fixture()
+	{
+		m_deferred.wait_all(m_pool.get());
 	}
 
 	cuda::memory_block_pool& get_pool() noexcept
@@ -179,7 +186,7 @@ TEST_CASE(
 		ALLOW_CALL(recorder, is_complete(trompeloeil::_))
 			.RETURN(false);
 
-		deferred.process();
+		deferred.process(fixture.get_pool());
 
 		CHECK( deferred.get_pending_count() == 1 );
 		CHECK_FALSE( block.is_free() );
@@ -196,7 +203,7 @@ TEST_CASE(
 		// than being queried again on every sweep.
 		REQUIRE_CALL(recorder, release(1u));
 
-		deferred.process();
+		deferred.process(fixture.get_pool());
 
 		CHECK( deferred.get_pending_count() == 1 );
 		CHECK_FALSE( block.is_free() );
@@ -209,7 +216,7 @@ TEST_CASE(
 		REQUIRE_CALL(recorder, release(1u));
 		REQUIRE_CALL(recorder, release(2u));
 
-		deferred.process();
+		deferred.process(fixture.get_pool());
 
 		CHECK( deferred.get_pending_count() == 0 );
 		CHECK( block.is_free() );
@@ -248,7 +255,7 @@ TEST_CASE(
 	// could not have swallowed it.
 	CHECK( halves.second->get_size() == 512 );
 
-	deferred.process();
+	deferred.process(fixture.get_pool());
 
 	CHECK( halves.first->get_size() == 1024 );
 	CHECK( halves.first->get_offset() == 0 );
@@ -280,7 +287,7 @@ TEST_CASE(
 	REQUIRE_CALL(recorder, release(1u))
 		.TIMES(2);
 
-	deferred.wait_all();
+	deferred.wait_all(fixture.get_pool());
 
 	CHECK( deferred.get_pending_count() == 0 );
 	CHECK( first.is_free() );
@@ -308,10 +315,16 @@ TEST_CASE(
 	REQUIRE_CALL(recorder, release(1u));
 
 	{
-		cuda::deferred_release deferred(pool.get(), recorder);
+		cuda::deferred_release deferred(
+			std::make_shared<cuda::event_recorder_reference>(recorder)
+		);
 
 		const std::array<cuda::queue_handle, 1> queues = {other};
 		deferred.defer(block, make_span(queues));
+
+		// Draining is the owner's to do, while it still has the pool to give
+		// the blocks back to.
+		deferred.wait_all(pool.get());
 	}
 
 	CHECK( block.is_free() );

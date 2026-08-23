@@ -51,6 +51,18 @@ public:
 	virtual void deallocate(void *data) noexcept = 0;
 
 	/**
+	 * @brief Check whether the host can address what this source hands out.
+	 *
+	 * The source is what actually took the memory, so it is what knows this;
+	 * the kind its resource advertises is a description of the same fact
+	 * rather than the fact itself.
+	 *
+	 * @return true The host can read and write the memory directly.
+	 * @return false The memory has to be transferred to reach the host.
+	 */
+	virtual bool is_host_accessible() const noexcept = 0;
+
+	/**
 	 * @brief Get the alignment that every region from @ref allocate satisfies.
 	 *
 	 * @return std::size_t Alignment, in bytes. A power of two, constant over

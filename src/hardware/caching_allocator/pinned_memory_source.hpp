@@ -41,6 +41,7 @@ public:
 
 	void* allocate(std::size_t size) override;
 	void deallocate(void *data) noexcept override;
+	bool is_host_accessible() const noexcept override;
 	std::size_t get_base_alignment() const noexcept override;
 
 private:

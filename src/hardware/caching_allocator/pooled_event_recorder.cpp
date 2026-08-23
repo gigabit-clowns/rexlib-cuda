@@ -4,26 +4,22 @@
 
 #include "queue_handle.hpp"
 
-#include "../device_guard.hpp"
 #include "../error.hpp"
+#include "../event.hpp"
 
 #include <cstddef>
 #include <stdexcept>
+
+#include <cuda_runtime.h>
 
 namespace xmipp4
 {
 namespace cuda
 {
 
-pooled_event_recorder::~pooled_event_recorder()
-{
-	for (const auto &item : m_events)
-	{
-		// Acts on the device that owns the event, so the current one is
-		// irrelevant here.
-		XMIPP4_CUDA_CHECK_NO_THROW( cudaEventDestroy(item.event) );
-	}
-}
+pooled_event_recorder::pooled_event_recorder() noexcept = default;
+
+pooled_event_recorder::~pooled_event_recorder() = default;
 
 event_recorder::ticket
 pooled_event_recorder::record(const queue_handle &queue)
@@ -40,7 +36,7 @@ pooled_event_recorder::record(const queue_handle &queue)
 	try
 	{
 		XMIPP4_CUDA_CHECK(
-			cudaEventRecord(get_event(result), queue.get_stream())
+			cudaEventRecord(get_event(result).get_handle(), queue.get_stream())
 		);
 	}
 	catch (...)
@@ -60,36 +56,18 @@ void pooled_event_recorder::release(ticket ticket) noexcept
 	}
 
 	// Room was reserved when the event was created, so this cannot throw.
-	const auto ordinal = m_events[ticket - 1].ordinal;
+	const auto ordinal = get_event(ticket).get_ordinal();
 	m_available[static_cast<std::size_t>(ordinal)].push_back(ticket);
 }
 
 bool pooled_event_recorder::is_complete(ticket ticket)
 {
-	const auto code = cudaEventQuery(get_event(ticket));
-
-	bool result;
-	switch (code)
-	{
-	case cudaSuccess:
-		result = true;
-		break;
-
-	case cudaErrorNotReady:
-		result = false;
-		break;
-
-	default:
-		XMIPP4_CUDA_CHECK(code);
-		result = false; // To avoid warnings. The above line should throw.
-		break;
-	}
-	return result;
+	return get_event(ticket).is_signaled();
 }
 
 void pooled_event_recorder::wait(ticket ticket)
 {
-	XMIPP4_CUDA_CHECK( cudaEventSynchronize(get_event(ticket)) );
+	get_event(ticket).wait();
 }
 
 void pooled_event_recorder::enqueue_wait(
@@ -108,15 +86,15 @@ void pooled_event_recorder::enqueue_wait(
 	XMIPP4_CUDA_CHECK(
 		cudaStreamWaitEvent(
 			queue.get_stream(),
-			get_event(ticket),
+			get_event(ticket).get_handle(),
 			cudaEventWaitDefault
 		)
 	);
 }
 
-cudaEvent_t pooled_event_recorder::get_event(ticket ticket) const noexcept
+event& pooled_event_recorder::get_event(ticket ticket) const noexcept
 {
-	return m_events[ticket - 1].event;
+	return *m_events[ticket - 1];
 }
 
 std::vector<event_recorder::ticket>&
@@ -147,28 +125,17 @@ event_recorder::ticket pooled_event_recorder::acquire(int ordinal)
 event_recorder::ticket pooled_event_recorder::create(int ordinal)
 {
 	// Every bit of room is made before the event exists, so that nothing can
-	// throw once it does and leave it stranded. Reserving for the whole pool
-	// rather than for this one event also keeps giving a ticket back
-	// allocation free, which it has to be: it happens where a failure can no
-	// longer be handled.
+	// throw once it does and leave it stranded. Giving a ticket back has to
+	// succeed in particular, since it happens where a failure can no longer be
+	// handled, and reserving here is what makes it allocation free.
 	const auto count = m_events.size() + 1;
+	get_available(ordinal).reserve(count);
 	if (count > m_events.capacity())
 	{
 		m_events.reserve(2 * count);
 	}
-	get_available(ordinal).reserve(m_events.capacity());
 
-	// Timing is never read from these events, and no host thread ever blocks
-	// on one for long enough for spinning to be the wrong trade.
-	cudaEvent_t event;
-	{
-		const device_guard guard(ordinal);
-		XMIPP4_CUDA_CHECK(
-			cudaEventCreateWithFlags(&event, cudaEventDisableTiming)
-		);
-	}
-
-	m_events.push_back(pooled_event{event, ordinal});
+	m_events.push_back(std::make_unique<event>(ordinal));
 	return m_events.size();
 }
 

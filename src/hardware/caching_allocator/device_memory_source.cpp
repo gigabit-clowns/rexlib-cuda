@@ -43,6 +43,11 @@ void device_memory_source::deallocate(void *data) noexcept
 	XMIPP4_CUDA_CHECK_NO_THROW( cudaFree(data) );
 }
 
+bool device_memory_source::is_host_accessible() const noexcept
+{
+	return false;
+}
+
 std::size_t device_memory_source::get_base_alignment() const noexcept
 {
 	return XMIPP4_CUDA_ALLOCATION_ALIGN_BYTES;

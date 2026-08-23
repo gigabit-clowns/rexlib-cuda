@@ -188,7 +188,7 @@ memory_block* memory_block_pool::register_heap(
 
 	m_blocks.push_back(*block);
 	m_free_blocks.insert(*block);
-	m_size += size;
+	m_size.fetch_add(size, std::memory_order_relaxed);
 
 	return block.release();
 }
@@ -283,7 +283,7 @@ std::size_t memory_block_pool::release_unused_heaps() noexcept
 		const auto *heap = block->get_heap();
 
 		result += heap->get_size();
-		m_size -= heap->get_size();
+		m_size.fetch_sub(heap->get_size(), std::memory_order_relaxed);
 
 		m_blocks.erase(m_blocks.iterator_to(*block));
 		ite = m_free_blocks.erase_and_dispose(
@@ -298,7 +298,7 @@ std::size_t memory_block_pool::release_unused_heaps() noexcept
 
 std::size_t memory_block_pool::get_size() const noexcept
 {
-	return m_size;
+	return m_size.load(std::memory_order_relaxed);
 }
 
 std::size_t memory_block_pool::get_acquired_block_count() const noexcept

@@ -10,6 +10,7 @@
 #include <xmipp4/core/span.hpp>
 
 #include <cstddef>
+#include <memory>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
@@ -42,16 +43,15 @@ class deferred_release
 {
 public:
 	/**
-	 * @brief Construct a deferred release over a pool.
+	 * @brief Construct a deferred release.
 	 *
-	 * @param pool The pool the blocks are given back to. Must outlive this.
 	 * @param recorder The recorder used to capture the points to wait for.
-	 * Must outlive this.
+	 * Shared rather than owned, since the allocator around this one captures
+	 * points of its own. Can not be nullptr.
+	 *
+	 * @throws std::invalid_argument If @p recorder is nullptr.
 	 */
-	deferred_release(
-		memory_block_pool &pool,
-		event_recorder &recorder
-	) noexcept;
+	explicit deferred_release(std::shared_ptr<event_recorder> recorder);
 	deferred_release(const deferred_release &other) = delete;
 	deferred_release(deferred_release &&other) = delete;
 	~deferred_release();
@@ -78,16 +78,20 @@ public:
 	 *
 	 * Does not block the calling thread.
 	 *
+	 * @param pool The pool the blocks came from.
+	 *
 	 * @throws error If a captured point could not be queried.
 	 */
-	void process();
+	void process(memory_block_pool &pool);
 
 	/**
 	 * @brief Give back every block, waiting for the queues that used them.
 	 *
+	 * @param pool The pool the blocks came from.
+	 *
 	 * @throws error If a captured point could not be waited for.
 	 */
-	void wait_all();
+	void wait_all(memory_block_pool &pool);
 
 	/**
 	 * @brief Get how many blocks are currently held back.
@@ -108,11 +112,10 @@ private:
 	/// many queues touched a single buffer, which is a handful.
 	using reached_point_flags = boost::container::small_vector<
 		bool,
-		XMIPP4_CUDA_SMALL_QUEUE_COUNT
+		XMIPP4_CUDA_CACHING_ALLOCATOR_SMALL_QUEUE_COUNT
 	>;
 
-	memory_block_pool *m_pool;
-	event_recorder *m_recorder;
+	std::shared_ptr<event_recorder> m_recorder;
 	std::vector<pending_release> m_pending;
 
 	/**

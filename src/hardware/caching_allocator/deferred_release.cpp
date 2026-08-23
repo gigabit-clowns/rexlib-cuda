@@ -17,28 +17,26 @@ namespace xmipp4
 namespace cuda
 {
 
-deferred_release::deferred_release(
-	memory_block_pool &pool,
-	event_recorder &recorder
-) noexcept
-	: m_pool(&pool)
-	, m_recorder(&recorder)
+deferred_release::deferred_release(std::shared_ptr<event_recorder> recorder)
+	: m_recorder(std::move(recorder))
 {
+	if (!m_recorder)
+	{
+		throw std::invalid_argument(
+			"deferred_release::deferred_release: An event recorder is required."
+		);
+	}
 }
 
 deferred_release::~deferred_release()
 {
-	try
+	if (!m_pending.empty())
 	{
-		wait_all();
-	}
-	catch (...)
-	{
-		// Can not throw from a destructor. The blocks stay out of the pool,
-		// which then reports them as never released.
+		// Only reachable if the owner let this go without draining it, which
+		// it has to do while it still has the pool to give the blocks back to.
 		XMIPP4_CUDA_LOG_ERROR(
-			"An exception occurred waiting for the queues still using memory "
-			"in ~deferred_release()."
+			"A deferred_release was destroyed while still holding blocks. "
+			"They are lost."
 		);
 	}
 }
@@ -76,7 +74,7 @@ void deferred_release::defer(
 	m_pending.push_back(pending_release{&block, std::move(tickets)});
 }
 
-void deferred_release::process()
+void deferred_release::process(memory_block_pool &pool)
 {
 	// Every block is looked at before any of them is moved. Compacting as we
 	// go would mean a failing query leaves entries behind that have been moved
@@ -89,12 +87,12 @@ void deferred_release::process()
 
 	const auto last = std::remove_if(
 		m_pending.begin(), m_pending.end(),
-		[this] (const pending_release &item) noexcept -> bool
+		[&pool] (const pending_release &item) noexcept -> bool
 		{
 			const auto reached = item.tickets.empty();
 			if (reached)
 			{
-				m_pool->release(*item.block);
+				pool.release(*item.block);
 			}
 			return reached;
 		}
@@ -103,7 +101,7 @@ void deferred_release::process()
 	m_pending.erase(last, m_pending.end());
 }
 
-void deferred_release::wait_all()
+void deferred_release::wait_all(memory_block_pool &pool)
 {
 	for (auto &item : m_pending)
 	{
@@ -112,7 +110,7 @@ void deferred_release::wait_all()
 			ticket.wait();
 		}
 
-		m_pool->release(*item.block);
+		pool.release(*item.block);
 	}
 
 	m_pending.clear();
