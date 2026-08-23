@@ -36,7 +36,7 @@ device_memory_resource::create_allocator() const
 		*this,
 		std::make_shared<memory_block_allocator>(
 			std::make_unique<device_memory_source>(m_ordinal),
-			std::make_shared<pooled_event_recorder>()
+			std::make_unique<pooled_event_recorder>()
 		)
 	);
 }

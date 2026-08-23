@@ -10,7 +10,6 @@
 
 #include "mock/mock_event_recorder.hpp"
 #include "mock/mock_memory_source.hpp"
-#include "test_event_recorder_reference.hpp"
 #include "test_queue.hpp"
 
 #include <array>
@@ -108,9 +107,6 @@ public:
 		, m_release_expectation(
 			NAMED_ALLOW_CALL(m_recorder, release(trompeloeil::_))
 		)
-		, m_deferred(
-			std::make_shared<cuda::event_recorder_reference>(m_recorder)
-		)
 	{
 	}
 
@@ -178,7 +174,7 @@ TEST_CASE(
 		.RETURN(2);
 
 	const std::array<cuda::queue_handle, 2> queues = {first, second};
-	deferred.defer(block, make_span(queues));
+	deferred.defer(recorder, block, make_span(queues));
 
 	CHECK( deferred.get_pending_count() == 1 );
 	CHECK_FALSE( block.is_free() );
@@ -251,7 +247,7 @@ TEST_CASE(
 		.RETURN(true);
 
 	const std::array<cuda::queue_handle, 1> queues = {other};
-	deferred.defer(*halves.first, make_span(queues));
+	deferred.defer(recorder, *halves.first, make_span(queues));
 
 	// While it waits it is not free, so the neighbour that came back before it
 	// could not have swallowed it.
@@ -281,8 +277,8 @@ TEST_CASE(
 		.RETURN(1);
 
 	const std::array<cuda::queue_handle, 1> queues = {other};
-	deferred.defer(first, make_span(queues));
-	deferred.defer(second, make_span(queues));
+	deferred.defer(recorder, first, make_span(queues));
+	deferred.defer(recorder, second, make_span(queues));
 
 	REQUIRE_CALL(recorder, wait(1u))
 		.TIMES(2);
@@ -317,12 +313,10 @@ TEST_CASE(
 	REQUIRE_CALL(recorder, release(1u));
 
 	{
-		cuda::deferred_release deferred(
-			std::make_shared<cuda::event_recorder_reference>(recorder)
-		);
+		cuda::deferred_release deferred;
 
 		const std::array<cuda::queue_handle, 1> queues = {other};
-		deferred.defer(block, make_span(queues));
+		deferred.defer(recorder, block, make_span(queues));
 
 		// Draining is the owner's to do, while it still has the pool to give
 		// the blocks back to.
@@ -349,7 +343,7 @@ TEST_CASE(
 	SECTION( "when no queue is named" )
 	{
 		CHECK_THROWS_AS(
-			deferred.defer(block, span<const cuda::queue_handle>()),
+			deferred.defer(recorder, block, span<const cuda::queue_handle>()),
 			std::invalid_argument
 		);
 	}
@@ -359,7 +353,7 @@ TEST_CASE(
 		const std::array<cuda::queue_handle, 1> queues =
 			{cuda::queue_handle()};
 		CHECK_THROWS_AS(
-			deferred.defer(block, make_span(queues)),
+			deferred.defer(recorder, block, make_span(queues)),
 			std::invalid_argument
 		);
 	}
@@ -395,7 +389,7 @@ TEST_CASE(
 
 	const std::array<cuda::queue_handle, 2> queues = {first, second};
 	CHECK_THROWS_AS(
-		deferred.defer(block, make_span(queues)),
+		deferred.defer(recorder, block, make_span(queues)),
 		std::runtime_error
 	);
 

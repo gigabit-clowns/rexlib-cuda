@@ -70,7 +70,7 @@ pinned_memory_resource::create_allocator() const
 		*this,
 		std::make_shared<memory_block_allocator>(
 			std::make_unique<pinned_memory_source>(mapped),
-			std::make_shared<pooled_event_recorder>()
+			std::make_unique<pooled_event_recorder>()
 		)
 	);
 }

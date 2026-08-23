@@ -6,7 +6,11 @@
 
 #include <hardware/caching_allocator/memory_block.hpp>
 
+#include "mock/mock_event_recorder.hpp"
+#include "mock/mock_memory_source.hpp"
 #include "test_block_allocator.hpp"
+#include "test_event_recorder_reference.hpp"
+#include "test_memory_source_reference.hpp"
 #include "test_queue.hpp"
 
 #include <config.hpp>
@@ -16,6 +20,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <new>
 #include <stdexcept>
 #include <vector>
@@ -91,6 +96,37 @@ TEST_CASE(
 	{
 		cuda::block_allocator_fixture fixture(cuda::test_arena::unlimited, true);
 		CHECK( fixture.get().is_host_accessible() );
+	}
+}
+
+TEST_CASE(
+	"memory_block_allocator should refuse to be built without what it needs",
+	"[memory_block_allocator]"
+)
+{
+	cuda::mock_memory_source source;
+	cuda::mock_event_recorder recorder;
+
+	SECTION( "when it is given no memory source" )
+	{
+		CHECK_THROWS_AS(
+			cuda::memory_block_allocator(
+				nullptr,
+				std::make_unique<cuda::event_recorder_reference>(recorder)
+			),
+			std::invalid_argument
+		);
+	}
+
+	SECTION( "when it is given no event recorder" )
+	{
+		CHECK_THROWS_AS(
+			cuda::memory_block_allocator(
+				std::make_unique<cuda::memory_source_reference>(source),
+				nullptr
+			),
+			std::invalid_argument
+		);
 	}
 }
 

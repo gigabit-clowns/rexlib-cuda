@@ -27,17 +27,24 @@ namespace cuda
 
 memory_block_allocator::memory_block_allocator(
 	std::unique_ptr<memory_source> source,
-	std::shared_ptr<event_recorder> recorder
+	std::unique_ptr<event_recorder> recorder
 )
 	: m_source(std::move(source))
 	, m_recorder(std::move(recorder))
-	, m_deferred(m_recorder)
 {
 	if (!m_source)
 	{
 		throw std::invalid_argument(
 			"memory_block_allocator::memory_block_allocator: A memory source is "
 			"required."
+		);
+	}
+
+	if (!m_recorder)
+	{
+		throw std::invalid_argument(
+			"memory_block_allocator::memory_block_allocator: An event recorder "
+			"is required."
 		);
 	}
 }
@@ -124,7 +131,7 @@ void memory_block_allocator::recycle(
 
 	try
 	{
-		m_deferred.defer(block, queues);
+		m_deferred.defer(*m_recorder, block, queues);
 	}
 	catch (...)
 	{

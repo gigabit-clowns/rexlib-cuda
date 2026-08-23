@@ -60,7 +60,7 @@ public:
 	 */
 	memory_block_allocator(
 		std::unique_ptr<memory_source> source,
-		std::shared_ptr<event_recorder> recorder
+		std::unique_ptr<event_recorder> recorder
 	);
 	memory_block_allocator(const memory_block_allocator &other) = delete;
 	memory_block_allocator(memory_block_allocator &&other) = delete;
@@ -135,13 +135,14 @@ public:
 
 private:
 	std::unique_ptr<memory_source> m_source;
-	std::shared_ptr<event_recorder> m_recorder;
+	std::unique_ptr<event_recorder> m_recorder;
 
 	std::mutex m_mutex;
 
-	// The deferred release gives blocks back to the pool as it drains, and the
-	// pool gives heaps back to the source. Declared in the order that makes
-	// them die the other way around.
+	// The deferred release gives blocks back to the pool as it drains, the
+	// pool gives heaps back to the source, and the points the release is
+	// holding go back to the recorder. Declared in the order that makes them
+	// die the other way around.
 	memory_block_pool m_pool;
 	deferred_release m_deferred;
 

@@ -10,7 +10,6 @@
 #include <xmipp4/core/span.hpp>
 
 #include <cstddef>
-#include <memory>
 #include <vector>
 
 #include <boost/container/small_vector.hpp>
@@ -43,15 +42,9 @@ class deferred_release
 {
 public:
 	/**
-	 * @brief Construct a deferred release.
-	 *
-	 * @param recorder The recorder used to capture the points to wait for.
-	 * Shared rather than owned, since the allocator around this one captures
-	 * points of its own. Can not be nullptr.
-	 *
-	 * @throws std::invalid_argument If @p recorder is nullptr.
+	 * @brief Construct a deferred release holding nothing back.
 	 */
-	explicit deferred_release(std::shared_ptr<event_recorder> recorder);
+	deferred_release() noexcept;
 	deferred_release(const deferred_release &other) = delete;
 	deferred_release(deferred_release &&other) = delete;
 	~deferred_release();
@@ -62,6 +55,9 @@ public:
 	/**
 	 * @brief Hold a block back until the queues that used it have caught up.
 	 *
+	 * @param recorder The recorder capturing the points to wait for. Must
+	 * outlive this, since the points captured here are given back to it as
+	 * they are reached.
 	 * @param block The block to hold back. Must have been handed out, and must
 	 * not already be held back.
 	 * @param queues The queues that used the block besides the one it belongs
@@ -71,7 +67,11 @@ public:
 	 * @throws error If a point of one of the queues could not be captured. The
 	 * block is then not held back, and is still not free.
 	 */
-	void defer(memory_block &block, span<const queue_handle> queues);
+	void defer(
+		event_recorder &recorder,
+		memory_block &block,
+		span<const queue_handle> queues
+	);
 
 	/**
 	 * @brief Give back every block whose queues have caught up.
@@ -115,7 +115,6 @@ private:
 		XMIPP4_CUDA_CACHING_ALLOCATOR_SMALL_QUEUE_COUNT
 	>;
 
-	std::shared_ptr<event_recorder> m_recorder;
 	std::vector<pending_release> m_pending;
 
 	/**

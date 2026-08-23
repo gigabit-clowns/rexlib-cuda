@@ -61,7 +61,7 @@ block_allocator_fixture::block_allocator_fixture(
 
 	m_allocator = std::make_shared<memory_block_allocator>(
 		std::make_unique<memory_source_reference>(m_source),
-		std::make_shared<event_recorder_reference>(m_recorder)
+		std::make_unique<event_recorder_reference>(m_recorder)
 	);
 }
 

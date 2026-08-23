@@ -17,16 +17,7 @@ namespace xmipp4
 namespace cuda
 {
 
-deferred_release::deferred_release(std::shared_ptr<event_recorder> recorder)
-	: m_recorder(std::move(recorder))
-{
-	if (!m_recorder)
-	{
-		throw std::invalid_argument(
-			"deferred_release::deferred_release: An event recorder is required."
-		);
-	}
-}
+deferred_release::deferred_release() noexcept = default;
 
 deferred_release::~deferred_release()
 {
@@ -42,6 +33,7 @@ deferred_release::~deferred_release()
 }
 
 void deferred_release::defer(
+	event_recorder &recorder,
 	memory_block &block,
 	span<const queue_handle> queues
 )
@@ -68,7 +60,7 @@ void deferred_release::defer(
 			);
 		}
 
-		tickets.emplace_back(*m_recorder, queue);
+		tickets.emplace_back(recorder, queue);
 	}
 
 	m_pending.emplace_back(&block, std::move(tickets));
