@@ -7,6 +7,10 @@
 
 #include <hardware/caching_allocator/memory_block.hpp>
 
+#include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
+#include <exception>
 #include <utility>
 
 namespace xmipp4
@@ -19,6 +23,7 @@ block_allocator_fixture::block_allocator_fixture(
 	bool host_accessible
 )
 	: m_arena(capacity, 256)
+	, m_released_twice(false)
 	, m_reached_by_default(true)
 {
 	m_expectations.push_back(
@@ -43,14 +48,15 @@ block_allocator_fixture::block_allocator_fixture(
 	);
 	m_expectations.push_back(
 		NAMED_ALLOW_CALL(m_recorder, release(trompeloeil::_))
+			.LR_SIDE_EFFECT(this->give_back(_1))
 	);
 	m_expectations.push_back(
 		NAMED_ALLOW_CALL(m_recorder, is_complete(trompeloeil::_))
-			.LR_RETURN(m_reached[_1 - 1])
+			.LR_RETURN(this->has_reached(_1))
 	);
 	m_expectations.push_back(
 		NAMED_ALLOW_CALL(m_recorder, wait(trompeloeil::_))
-			.LR_SIDE_EFFECT(m_reached[_1 - 1] = true)
+			.LR_SIDE_EFFECT(this->mark_reached(_1))
 	);
 	m_expectations.push_back(
 		NAMED_ALLOW_CALL(
@@ -70,6 +76,17 @@ block_allocator_fixture::~block_allocator_fixture()
 	// The allocator has to be gone before the mocks it forwards to, since it
 	// gives every heap it is still holding back on the way out.
 	m_allocator.reset();
+
+	// Whatever a test did, an allocator that has been destroyed owes the
+	// driver and the recorder nothing. Checked once here rather than in every
+	// test. Skipped while an exception is on its way out, since the failure
+	// that caused it is the one worth reporting.
+	if (std::uncaught_exceptions() == 0)
+	{
+		CHECK( m_arena.get_region_count() == 0 );
+		CHECK( get_outstanding_ticket_count() == 0 );
+		CHECK_FALSE( m_released_twice );
+	}
 }
 
 memory_block_allocator& block_allocator_fixture::get() noexcept
@@ -109,9 +126,9 @@ test_arena& block_allocator_fixture::get_arena() noexcept
 	return m_arena;
 }
 
-void block_allocator_fixture::reach(event_recorder::ticket ticket) noexcept
+void block_allocator_fixture::reach(event_recorder::ticket ticket)
 {
-	m_reached[ticket - 1] = true;
+	mark_reached(ticket);
 }
 
 void block_allocator_fixture::set_reached_by_default(bool reached) noexcept
@@ -126,11 +143,58 @@ const queue_handle& block_allocator_fixture::get_captured_queue(
 	return m_captured_queues[ticket - 1];
 }
 
+void block_allocator_fixture::track(event_recorder::ticket ticket)
+{
+	// A test can answer record() itself, to pin the ticket that a later
+	// expectation names. The first this fixture then hears of that ticket is
+	// whatever the allocator does with it, so room is made for it here rather
+	// than reading past the end of what capture() handed out.
+	if (m_released.size() < ticket)
+	{
+		m_captured_queues.resize(ticket);
+		m_reached.resize(ticket, m_reached_by_default);
+		m_released.resize(ticket, false);
+	}
+}
+
+bool block_allocator_fixture::has_reached(event_recorder::ticket ticket)
+{
+	track(ticket);
+	return m_reached[ticket - 1];
+}
+
+void block_allocator_fixture::mark_reached(event_recorder::ticket ticket)
+{
+	track(ticket);
+	m_reached[ticket - 1] = true;
+}
+
+std::size_t
+block_allocator_fixture::get_outstanding_ticket_count() const noexcept
+{
+	return static_cast<std::size_t>(
+		std::count(m_released.cbegin(), m_released.cend(), false)
+	);
+}
+
 event_recorder::ticket block_allocator_fixture::capture(const queue_handle &queue)
 {
 	m_captured_queues.push_back(queue);
 	m_reached.push_back(m_reached_by_default);
+	m_released.push_back(false);
 	return m_reached.size();
+}
+
+void block_allocator_fixture::give_back(event_recorder::ticket ticket)
+{
+	track(ticket);
+	const auto index = ticket - 1;
+
+	// A point given back twice is a point that could be handed out again while
+	// something still holds it, which is worth failing over wherever it
+	// happens.
+	m_released_twice = m_released_twice || m_released[index];
+	m_released[index] = true;
 }
 
 } // namespace cuda

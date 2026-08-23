@@ -29,6 +29,10 @@ namespace cuda
  * which takes precedence. Capturing a point is answered with a fresh ticket
  * that starts out already reached, so that a test only has to say anything
  * when it wants work to still be running.
+ *
+ * On the way out it checks that the allocator ended up owing nothing: every
+ * region taken from the arena given back, and every point captured given back
+ * exactly once. A test that leaks either fails without having to say so.
  */
 class block_allocator_fixture
 {
@@ -74,7 +78,7 @@ public:
 	 *
 	 * @param ticket The ticket.
 	 */
-	void reach(event_recorder::ticket ticket) noexcept;
+	void reach(event_recorder::ticket ticket);
 
 	/**
 	 * @brief Say whether points start out reached.
@@ -94,6 +98,13 @@ public:
 		event_recorder::ticket ticket
 	) const noexcept;
 
+	/**
+	 * @brief Get how many captured points have not been given back.
+	 *
+	 * @return std::size_t Number of tickets still outstanding.
+	 */
+	std::size_t get_outstanding_ticket_count() const noexcept;
+
 private:
 	mock_memory_source m_source;
 	mock_event_recorder m_recorder;
@@ -101,12 +112,18 @@ private:
 
 	std::vector<queue_handle> m_captured_queues;
 	std::vector<bool> m_reached;
+	std::vector<bool> m_released;
+	bool m_released_twice;
 	bool m_reached_by_default;
 
 	std::vector<std::unique_ptr<trompeloeil::expectation>> m_expectations;
 	std::shared_ptr<memory_block_allocator> m_allocator;
 
 	event_recorder::ticket capture(const queue_handle &queue);
+	void track(event_recorder::ticket ticket);
+	bool has_reached(event_recorder::ticket ticket);
+	void mark_reached(event_recorder::ticket ticket);
+	void give_back(event_recorder::ticket ticket);
 };
 
 } // namespace cuda
