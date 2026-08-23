@@ -79,17 +79,5 @@ bool memory_block::is_free() const noexcept
 	return free_block_set_hook.is_linked();
 }
 
-inline
-bool operator==(const memory_block &lhs, const memory_block &rhs) noexcept
-{
-	return &lhs == &rhs;
-}
-
-inline
-bool operator!=(const memory_block &lhs, const memory_block &rhs) noexcept
-{
-	return !(lhs == rhs);
-}
-
 } // namespace cuda
 } // namespace xmipp4

@@ -127,15 +127,30 @@ public:
 	 */
 	bool is_free() const noexcept;
 
+	/// Blocks stand for a region of a heap, which no two of them share, so
+	/// each one is only ever equal to itself.
+	friend bool operator==(
+		const memory_block &lhs,
+		const memory_block &rhs
+	) noexcept
+	{
+		return &lhs == &rhs;
+	}
+
+	friend bool operator!=(
+		const memory_block &lhs,
+		const memory_block &rhs
+	) noexcept
+	{
+		return !(lhs == rhs);
+	}
+
 private:
 	queue_handle m_queue;
 	std::size_t m_size;
 	memory_heap *m_heap;
 	std::size_t m_offset;
 };
-
-bool operator==(const memory_block &lhs, const memory_block &rhs) noexcept;
-bool operator!=(const memory_block &lhs, const memory_block &rhs) noexcept;
 
 } // namespace cuda
 } // namespace xmipp4

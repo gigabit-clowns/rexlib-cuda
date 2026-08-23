@@ -71,7 +71,7 @@ void deferred_release::defer(
 		tickets.emplace_back(*m_recorder, queue);
 	}
 
-	m_pending.push_back(pending_release{&block, std::move(tickets)});
+	m_pending.emplace_back(&block, std::move(tickets));
 }
 
 void deferred_release::process(memory_block_pool &pool)
@@ -87,7 +87,7 @@ void deferred_release::process(memory_block_pool &pool)
 
 	const auto last = std::remove_if(
 		m_pending.begin(), m_pending.end(),
-		[&pool] (const pending_release &item) noexcept -> bool
+		[&pool] (const pending_release &item) noexcept
 		{
 			const auto reached = item.tickets.empty();
 			if (reached)

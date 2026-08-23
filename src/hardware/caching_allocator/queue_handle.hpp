@@ -4,6 +4,8 @@
 
 #include <cuda_runtime.h>
 
+#include <cstdint>
+
 namespace xmipp4
 {
 namespace cuda
@@ -81,26 +83,49 @@ public:
 	 */
 	explicit operator bool() const noexcept;
 
+	/// The stream is what identifies a queue; the ordinal only says where it
+	/// lives, and two handles on one stream cannot disagree about it.
+	friend bool operator==(
+		const queue_handle &lhs,
+		const queue_handle &rhs
+	) noexcept
+	{
+		return lhs.get_stream() == rhs.get_stream();
+	}
+
+	friend bool operator!=(
+		const queue_handle &lhs,
+		const queue_handle &rhs
+	) noexcept
+	{
+		return !(lhs == rhs);
+	}
+
+	/**
+	 * @brief Total order over handles, so that they can key an ordered
+	 * container.
+	 *
+	 * Built on the stream addresses rather than on the handles themselves,
+	 * since comparing unrelated pointers with @c operator< is unspecified.
+	 *
+	 * @param lhs Left hand side of the comparison.
+	 * @param rhs Right hand side of the comparison.
+	 * @return true @p lhs orders before @p rhs.
+	 * @return false @p lhs does not order before @p rhs.
+	 */
+	friend bool operator<(
+		const queue_handle &lhs,
+		const queue_handle &rhs
+	) noexcept
+	{
+		return reinterpret_cast<std::uintptr_t>(lhs.get_stream()) <
+		       reinterpret_cast<std::uintptr_t>(rhs.get_stream());
+	}
+
 private:
 	cudaStream_t m_stream;
 	int m_ordinal;
 };
-
-bool operator==(const queue_handle &lhs, const queue_handle &rhs) noexcept;
-bool operator!=(const queue_handle &lhs, const queue_handle &rhs) noexcept;
-
-/**
- * @brief Total order over handles, so that they can key an ordered container.
- *
- * Built on the stream addresses rather than on the handles themselves, since
- * comparing unrelated pointers with @c operator< is unspecified.
- *
- * @param lhs Left hand side of the comparison.
- * @param rhs Right hand side of the comparison.
- * @return true @p lhs orders before @p rhs.
- * @return false @p lhs does not order before @p rhs.
- */
-bool operator<(const queue_handle &lhs, const queue_handle &rhs) noexcept;
 
 } // namespace cuda
 } // namespace xmipp4

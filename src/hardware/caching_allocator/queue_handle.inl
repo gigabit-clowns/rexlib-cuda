@@ -4,8 +4,6 @@
 
 #include "../command_queue.hpp"
 
-#include <cstdint>
-
 namespace xmipp4
 {
 namespace cuda
@@ -48,25 +46,6 @@ inline
 queue_handle::operator bool() const noexcept
 {
 	return m_stream != nullptr;
-}
-
-inline
-bool operator==(const queue_handle &lhs, const queue_handle &rhs) noexcept
-{
-	return lhs.get_stream() == rhs.get_stream();
-}
-
-inline
-bool operator!=(const queue_handle &lhs, const queue_handle &rhs) noexcept
-{
-	return !(lhs == rhs);
-}
-
-inline
-bool operator<(const queue_handle &lhs, const queue_handle &rhs) noexcept
-{
-	return reinterpret_cast<std::uintptr_t>(lhs.get_stream()) <
-	       reinterpret_cast<std::uintptr_t>(rhs.get_stream());
 }
 
 } // namespace cuda
