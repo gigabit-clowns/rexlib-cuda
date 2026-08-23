@@ -3,13 +3,10 @@
 #pragma once
 
 #include "mock/mock_event_recorder.hpp"
-#include "mock/mock_memory_resource.hpp"
 #include "mock/mock_memory_source.hpp"
 #include "test_arena.hpp"
 
-#include <hardware/caching_allocator/caching_memory_allocator.hpp>
-
-#include <xmipp4/core/hardware/memory_resource_kind.hpp>
+#include <hardware/caching_allocator/memory_block_allocator.hpp>
 
 #include <cstddef>
 #include <memory>
@@ -21,7 +18,7 @@ namespace cuda
 {
 
 /**
- * @brief A caching allocator over ordinary host memory.
+ * @brief A block allocator over ordinary host memory.
  *
  * Everything the allocator reaches out to is mocked, so a test can say what
  * the device has left and when its queues have caught up, and can ask what was
@@ -33,32 +30,44 @@ namespace cuda
  * that starts out already reached, so that a test only has to say anything
  * when it wants work to still be running.
  */
-class allocator_fixture
+class block_allocator_fixture
 {
 public:
 	/**
 	 * @brief Build an allocator.
 	 *
 	 * @param capacity Number of bytes the device has.
-	 * @param kind Kind of memory the allocator hands out.
+	 * @param host_accessible Whether the host can address what it hands out.
 	 */
-	explicit allocator_fixture(
+	explicit block_allocator_fixture(
 		std::size_t capacity = test_arena::unlimited,
-		memory_resource_kind kind = memory_resource_kind::device_local
+		bool host_accessible = false
 	);
-	allocator_fixture(const allocator_fixture &other) = delete;
-	allocator_fixture(allocator_fixture &&other) = delete;
-	~allocator_fixture();
+	block_allocator_fixture(const block_allocator_fixture &other) = delete;
+	block_allocator_fixture(block_allocator_fixture &&other) = delete;
+	~block_allocator_fixture();
 
-	allocator_fixture& operator=(const allocator_fixture &other) = delete;
-	allocator_fixture& operator=(allocator_fixture &&other) = delete;
+	block_allocator_fixture&
+	operator=(const block_allocator_fixture &other) = delete;
+	block_allocator_fixture&
+	operator=(block_allocator_fixture &&other) = delete;
 
-	caching_memory_allocator& get() noexcept;
-	const std::shared_ptr<caching_memory_allocator>& get_shared() noexcept;
+	memory_block_allocator& get() noexcept;
+	const std::shared_ptr<memory_block_allocator>& get_shared() noexcept;
 	mock_memory_source& get_source() noexcept;
 	mock_event_recorder& get_recorder() noexcept;
-	const mock_memory_resource& get_resource() const noexcept;
 	test_arena& get_arena() noexcept;
+
+	/**
+	 * @brief Allocate a block and give it straight back.
+	 *
+	 * What a buffer nobody keeps does.
+	 *
+	 * @param size Size of the block, in bytes.
+	 * @param queue The queue the block is handed to.
+	 * @return void* Where the block was.
+	 */
+	void* allocate_and_drop(std::size_t size, const queue_handle &queue);
 
 	/**
 	 * @brief Report the point a ticket stands for as reached.
@@ -86,7 +95,6 @@ public:
 	) const noexcept;
 
 private:
-	mock_memory_resource m_resource;
 	mock_memory_source m_source;
 	mock_event_recorder m_recorder;
 	test_arena m_arena;
@@ -96,7 +104,7 @@ private:
 	bool m_reached_by_default;
 
 	std::vector<std::unique_ptr<trompeloeil::expectation>> m_expectations;
-	std::shared_ptr<caching_memory_allocator> m_allocator;
+	std::shared_ptr<memory_block_allocator> m_allocator;
 
 	event_recorder::ticket capture(const queue_handle &queue);
 };

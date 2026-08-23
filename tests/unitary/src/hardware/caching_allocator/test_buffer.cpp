@@ -7,7 +7,7 @@
 #include <hardware/caching_allocator/caching_memory_allocator.hpp>
 
 #include "mock/mock_buffer.hpp"
-#include "test_allocator.hpp"
+#include "test_caching_allocator.hpp"
 #include "test_queue.hpp"
 
 #include <config.hpp>
@@ -27,7 +27,7 @@ constexpr std::size_t min_heap =
 	XMIPP4_CUDA_CACHING_ALLOCATOR_MIN_HEAP_BYTES;
 
 cuda::buffer& allocate_buffer(
-	cuda::allocator_fixture &fixture,
+	cuda::caching_allocator_fixture &fixture,
 	const cuda::queue_handle &queue,
 	std::shared_ptr<xmipp4::buffer> &owner
 )
@@ -43,7 +43,7 @@ TEST_CASE(
 	"[buffer]"
 )
 {
-	cuda::allocator_fixture fixture;
+	cuda::caching_allocator_fixture fixture;
 	std::shared_ptr<xmipp4::buffer> owner;
 	auto &buf = allocate_buffer(fixture, cuda::make_test_queue(0), owner);
 
@@ -55,7 +55,7 @@ TEST_CASE(
 	"[buffer]"
 )
 {
-	cuda::allocator_fixture fixture;
+	cuda::caching_allocator_fixture fixture;
 	const auto own = cuda::make_test_queue(0);
 	const auto first = cuda::make_test_queue(1);
 	const auto second = cuda::make_test_queue(2);
@@ -101,12 +101,12 @@ TEST_CASE(
 	"[buffer]"
 )
 {
-	cuda::allocator_fixture fixture;
+	cuda::caching_allocator_fixture fixture;
 	const auto own = cuda::make_test_queue(0);
 	const auto other = cuda::make_test_queue(1);
 
 	// Nothing counts as finished until a test says so.
-	fixture.set_reached_by_default(false);
+	fixture.get_blocks().set_reached_by_default(false);
 
 	// A whole heap at a time, so that the block being held back is the only
 	// thing that could serve the next request.
@@ -121,14 +121,14 @@ TEST_CASE(
 	// has to be served out of memory taken from the driver instead.
 	auto second = fixture.get().allocate(min_heap, alignment, own);
 	CHECK( cuda::buffer::cast(*second).get_device_ptr() != first_data );
-	CHECK( fixture.get_arena().get_used_bytes() == 2 * min_heap );
+	CHECK( fixture.get_blocks().get_arena().get_used_bytes() == 2 * min_heap );
 
 	// Once the queue that was using it has caught up, it goes back into the
 	// pool like any other block.
 	second.reset();
-	fixture.reach(1);
+	fixture.get_blocks().reach(1);
 
-	FORBID_CALL(fixture.get_source(), allocate(trompeloeil::_));
+	FORBID_CALL(fixture.get_blocks().get_source(), allocate(trompeloeil::_));
 	auto third = fixture.get().allocate(min_heap, alignment, own);
 	auto fourth = fixture.get().allocate(min_heap, alignment, own);
 }
@@ -138,13 +138,13 @@ TEST_CASE(
 	"[buffer]"
 )
 {
-	cuda::allocator_fixture fixture;
+	cuda::caching_allocator_fixture fixture;
 	const auto own = cuda::make_test_queue(0);
 
-	fixture.set_reached_by_default(false);
+	fixture.get_blocks().set_reached_by_default(false);
 
 	// Nothing has to be waited for, so nothing is captured.
-	FORBID_CALL(fixture.get_recorder(), record(trompeloeil::_));
+	FORBID_CALL(fixture.get_blocks().get_recorder(), record(trompeloeil::_));
 
 	void *first_data = nullptr;
 	{
@@ -163,7 +163,7 @@ TEST_CASE(
 	"[buffer]"
 )
 {
-	cuda::allocator_fixture fixture;
+	cuda::caching_allocator_fixture fixture;
 	std::shared_ptr<xmipp4::buffer> owner;
 	auto &buf = allocate_buffer(fixture, cuda::make_test_queue(0), owner);
 

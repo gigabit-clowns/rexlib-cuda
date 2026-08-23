@@ -3,6 +3,7 @@
 #include "pinned_memory_resource.hpp"
 
 #include "caching_allocator/caching_memory_allocator.hpp"
+#include "caching_allocator/memory_block_allocator.hpp"
 #include "caching_allocator/pinned_memory_source.hpp"
 #include "caching_allocator/pooled_event_recorder.hpp"
 
@@ -67,8 +68,10 @@ pinned_memory_resource::create_allocator() const
 	const bool mapped = (m_kind == memory_resource_kind::unified);
 	return std::make_shared<caching_memory_allocator>(
 		*this,
-		std::make_unique<pinned_memory_source>(mapped),
-		std::make_shared<pooled_event_recorder>()
+		std::make_shared<memory_block_allocator>(
+			std::make_unique<pinned_memory_source>(mapped),
+			std::make_shared<pooled_event_recorder>()
+		)
 	);
 }
 

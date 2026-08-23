@@ -2,8 +2,8 @@
 
 #include "buffer.hpp"
 
-#include "caching_memory_allocator.hpp"
 #include "memory_block.hpp"
+#include "memory_block_allocator.hpp"
 
 #include "../command_queue.hpp"
 
@@ -16,12 +16,14 @@ namespace cuda
 {
 
 buffer::buffer(
-	std::shared_ptr<caching_memory_allocator> allocator,
+	std::shared_ptr<memory_block_allocator> allocator,
 	memory_block &block,
+	const memory_resource &resource,
 	void *host_data
 )
 	: m_allocator(std::move(allocator))
 	, m_block(&block)
+	, m_resource(&resource)
 	, m_host_data(host_data)
 {
 	if (!m_allocator)
@@ -55,7 +57,7 @@ std::size_t buffer::get_size() const noexcept
 
 const memory_resource& buffer::get_memory_resource() const noexcept
 {
-	return m_allocator->get_memory_resource();
+	return *m_resource;
 }
 
 void* buffer::get_device_ptr() noexcept

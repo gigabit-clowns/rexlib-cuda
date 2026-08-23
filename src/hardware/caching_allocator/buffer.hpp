@@ -22,14 +22,16 @@ class command_queue;
 namespace cuda
 {
 
-class caching_memory_allocator;
 class memory_block;
+class memory_block_allocator;
 
 /**
  * @brief CUDA implementation of @ref xmipp4::buffer.
  *
- * Owns a block of a @ref caching_memory_allocator for as long as it lives, and
- * gives it back when it dies. It also keeps track of which queues besides the
+ * Owns a block of a @ref memory_block_allocator for as long as it lives, and
+ * gives it back when it dies. Holding the block allocator rather than the
+ * @ref caching_memory_allocator it came from is what lets the memory outlive
+ * that allocator, and keeps giving a block back off the public interface. It also keeps track of which queues besides the
  * one it was allocated for have been given work referencing it, since that is
  * what the allocator has to wait for before the block can be handed out again.
  *
@@ -52,14 +54,17 @@ public:
 	 * this lives, so that the block can always be given back. Can not be
 	 * nullptr.
 	 * @param block The block. Must have been handed out by @p allocator.
+	 * @param resource The resource the memory is said to come from. Must
+	 * outlive this.
 	 * @param host_data Where the host can reach the block's memory, or nullptr
 	 * if it cannot reach it at all. Kept as its own pointer rather than
 	 * derived from the device one, since the two only happen to coincide where
 	 * the addresses are unified.
 	 */
 	buffer(
-		std::shared_ptr<caching_memory_allocator> allocator,
+		std::shared_ptr<memory_block_allocator> allocator,
 		memory_block &block,
+		const memory_resource &resource,
 		void *host_data
 	);
 	buffer(const buffer &other) = delete;
@@ -159,8 +164,9 @@ private:
 		>
 	>;
 
-	std::shared_ptr<caching_memory_allocator> m_allocator;
+	std::shared_ptr<memory_block_allocator> m_allocator;
 	memory_block *m_block;
+	const memory_resource *m_resource;
 	void *m_host_data;
 	queue_set_type m_queues;
 };
