@@ -36,13 +36,12 @@ TEST_CASE(
 		const std::string message = e.what();
 
 		// The call is what says which of the many in a function failed, and
-		// the driver's own wording is what says why.
+		// where it was is what says which call that is. What the runtime says
+		// about the code is not checked: it is free to say nothing at all, and
+		// does on some platforms.
 		CHECK( message.find("cudaErrorInvalidValue") != std::string::npos );
-		CHECK(
-			message.find(cudaGetErrorString(cudaErrorInvalidValue)) !=
-			std::string::npos
-		);
 		CHECK( message.find(__FILE__) != std::string::npos );
+		CHECK_FALSE( message.empty() );
 	}
 }
 
@@ -86,4 +85,31 @@ TEST_CASE(
 	CHECK_NOTHROW( XMIPP4_CUDA_CHECK_NO_THROW(cudaSuccess) );
 	CHECK_NOTHROW( XMIPP4_CUDA_CHECK_NO_THROW(cudaErrorInvalidValue) );
 	CHECK_NOTHROW( XMIPP4_CUDA_CHECK_NO_THROW(cudaErrorMemoryAllocation) );
+}
+
+TEST_CASE(
+	"a CUDA error should describe a code the runtime says nothing about",
+	"[error]"
+)
+{
+	// The runtime is free to answer with nothing at all for a code it does not
+	// recognize, and does on some platforms. Streaming that straight into the
+	// message reads past a null pointer.
+	const auto unrecognized = static_cast<cudaError_t>(0x7ffffff0);
+
+	try
+	{
+		XMIPP4_CUDA_CHECK(unrecognized);
+		FAIL( "The check should have thrown." );
+	}
+	catch (const cuda::error &e)
+	{
+		// Whatever the runtime had to say about it, the message still says
+		// which call failed and where.
+		const std::string message = e.what();
+		CHECK( message.find("unrecognized") != std::string::npos );
+		CHECK( message.find(__FILE__) != std::string::npos );
+	}
+
+	CHECK_NOTHROW( XMIPP4_CUDA_CHECK_NO_THROW(unrecognized) );
 }

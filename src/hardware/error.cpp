@@ -13,6 +13,15 @@ namespace xmipp4
 namespace cuda
 {
 
+// The runtime has no description for every code it can be handed, and answers
+// with nothing at all for the ones it does not know. Streaming that reads past
+// a null pointer, so a code without a description gets one here.
+static const char* describe(cudaError_t code) noexcept
+{
+	const auto *result = cudaGetErrorString(code);
+	return result ? result : "Unknown error";
+}
+
 static std::string format_error(
 	cudaError_t code,
 	const char* call,
@@ -22,7 +31,7 @@ static std::string format_error(
 {
 	std::ostringstream oss;
 	oss << "CUDA Runtime Error at: " << file << ":" << line << std::endl;
-	oss << cudaGetErrorString(code) << " " << call << std::endl;
+	oss << describe(code) << " " << call << std::endl;
 	return oss.str();
 }
 
@@ -71,7 +80,7 @@ void check_no_throw(
 	std::fprintf(
 		stderr,
 		"CUDA Runtime Error at: %s:%d\n%s %s\n",
-		file, line, cudaGetErrorString(code), call
+		file, line, describe(code), call
 	);
 }
 
