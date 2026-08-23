@@ -12,6 +12,7 @@
 
 #include <config.hpp>
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -70,7 +71,8 @@ TEST_CASE(
 
 		const auto queues = buf.get_recorded_queues();
 		REQUIRE( queues.size() == 2 );
-		CHECK( queues[0] != queues[1] );
+		CHECK( std::count(queues.begin(), queues.end(), first) == 1 );
+		CHECK( std::count(queues.begin(), queues.end(), second) == 1 );
 	}
 
 	SECTION( "counting a queue only once however often it is given work" )

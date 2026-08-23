@@ -9,6 +9,7 @@
 #include "mock/mock_memory_source.hpp"
 #include "test_queue.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <stdexcept>
@@ -80,8 +81,12 @@ private:
 
 	cuda::memory_block_pool m_pool;
 
-	void* take(std::size_t size) noexcept
+	void* take(std::size_t size)
 	{
+		// Handing out what is not there would quietly corrupt whatever sits
+		// after the storage, and read as the pool misbehaving.
+		REQUIRE( m_used + size <= sizeof(storage) );
+
 		auto *result = storage + m_used;
 		m_used += size;
 		return result;
@@ -598,7 +603,9 @@ TEST_CASE(
 	// queue that does not exist.
 	REQUIRE( queues.size() == 2 );
 	CHECK(
-		(queues[0] == first_queue || queues[0] == second_queue)
+		std::count(queues.cbegin(), queues.cend(), first_queue) == 1
 	);
-	CHECK( queues[0] != queues[1] );
+	CHECK(
+		std::count(queues.cbegin(), queues.cend(), second_queue) == 1
+	);
 }

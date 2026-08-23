@@ -13,6 +13,7 @@
 #include <config.hpp>
 
 #include <xmipp4/core/hardware/buffer.hpp>
+#include <xmipp4/core/hardware/command_queue.hpp>
 #include <xmipp4/core/memory/align.hpp>
 
 #include <cstddef>
@@ -60,6 +61,49 @@ TEST_CASE(
 		cuda::caching_memory_allocator(resource, nullptr),
 		std::invalid_argument
 	);
+}
+
+TEST_CASE(
+	"a caching_memory_allocator should work out the queue a hint names",
+	"[caching_memory_allocator]"
+)
+{
+	cuda::caching_allocator_fixture fixture;
+
+	SECTION( "taking no hint to mean no queue in particular" )
+	{
+		// A buffer that named no queue can be handed to any of them, so what
+		// is handed out belongs to none.
+		FORBID_CALL(
+			fixture.get_blocks().get_recorder(),
+			record(trompeloeil::_)
+		);
+
+		auto buf = fixture.get().allocate(1024, alignment, nullptr);
+		REQUIRE( buf != nullptr );
+
+		auto other = fixture.get().allocate(1024, alignment, nullptr);
+		REQUIRE( other != nullptr );
+	}
+
+	SECTION( "and refusing a queue this backend did not make" )
+	{
+		class foreign_queue final : public xmipp4::command_queue
+		{
+		public:
+			void submit(const xmipp4::command&) override {}
+			void signal(xmipp4::event&) override {}
+			void wait(const xmipp4::event&) override {}
+		};
+
+		// There is no stream behind it, so there is nothing to order the
+		// buffer against and nothing to record a point on.
+		foreign_queue queue;
+		CHECK_THROWS_AS(
+			fixture.get().allocate(1024, alignment, &queue),
+			std::invalid_argument
+		);
+	}
 }
 
 TEST_CASE(

@@ -79,8 +79,12 @@ private:
 
 	cuda::memory_block_pool m_pool;
 
-	void* take(std::size_t size) noexcept
+	void* take(std::size_t size)
 	{
+		// Handing out what is not there would quietly corrupt whatever sits
+		// after the storage, and read as the pool misbehaving.
+		REQUIRE( m_used + size <= sizeof(storage) );
+
 		auto *result = storage + m_used;
 		m_used += size;
 		return result;
