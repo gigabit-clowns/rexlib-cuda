@@ -14,21 +14,23 @@ namespace cuda
 {
 
 /**
- * @brief Check whether every CUDA device shares its memory with the host.
+ * @brief Work out what page locked host memory is on this machine.
  *
- * Only then is page locked memory the same thing the device computes out of,
- * rather than a staging area to transfer through. A machine with no device at
- * all has nothing to share with, and a machine with a mix is answered
- * conservatively: the devices that do share get the ordinary staging answer
- * and lose an optimization, rather than being promised an accessibility that
+ * It is the memory the devices compute out of only where every one of them
+ * shares the host's, and a staging area to transfer through otherwise. A
+ * machine with no device at all has nothing to share with, and one mixing both
+ * sorts of device is answered conservatively: those that do share lose an
+ * optimization, rather than every buffer being promised an accessibility that
  * does not hold for all of them.
+ *
+ * @return memory_resource_kind What the memory is.
  */
-static bool all_devices_share_host_memory() noexcept
+static memory_resource_kind query_pinned_memory_kind() noexcept
 {
 	int count;
 	if (cudaGetDeviceCount(&count) != cudaSuccess || count == 0)
 	{
-		return false;
+		return memory_resource_kind::host_staging;
 	}
 
 	for (int ordinal = 0; ordinal < count; ++ordinal)
@@ -36,26 +38,22 @@ static bool all_devices_share_host_memory() noexcept
 		cudaDeviceProp properties;
 		if (cudaGetDeviceProperties(&properties, ordinal) != cudaSuccess)
 		{
-			return false;
+			return memory_resource_kind::host_staging;
 		}
 
 		if (!properties.integrated)
 		{
-			return false;
+			return memory_resource_kind::host_staging;
 		}
 	}
 
-	return true;
+	return memory_resource_kind::unified;
 }
 
 
 
 pinned_memory_resource::pinned_memory_resource()
-	: m_kind(
-		all_devices_share_host_memory()
-			? memory_resource_kind::unified
-			: memory_resource_kind::host_staging
-	)
+	: m_kind(query_pinned_memory_kind())
 {
 }
 
