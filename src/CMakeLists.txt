@@ -8,6 +8,36 @@ file(
 		${CMAKE_CURRENT_SOURCE_DIR}/*.c
 )
 
+# Usage requirements shared by everything that is built out of the plugin's
+# objects: the object library itself, the plugin and the unitary tests.
+# $<TARGET_OBJECTS:> only carries the objects, so consumers pick these up from
+# here instead.
+set(DEPS_NAME ${PROJECT_NAME}-deps)
+add_library(${DEPS_NAME} INTERFACE)
+target_link_libraries(
+	${DEPS_NAME}
+	INTERFACE
+		xmipp4-core
+		CUDA::cudart
+		Boost::container
+		Boost::intrusive
+		Boost::unordered
+		spdlog::spdlog
+)
+
+# The unitary tests reach the plugin's internals, which have no installed
+# headers, so they include them from here.
+target_include_directories(
+	${DEPS_NAME}
+	INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Disable min/max macros in windows
+if(MSVC)
+	target_compile_definitions(${DEPS_NAME} INTERFACE NOMINMAX)
+endif()
+
 # Compile the sources once into an object library, so that both the plugin and
 # the unitary test executable can consume them. A MODULE cannot be linked
 # against, which is what the tests would otherwise need.
@@ -30,21 +60,8 @@ target_compile_definitions(
 )
 target_link_libraries(
 	${OBJECTS_NAME}
-	PUBLIC
-		xmipp4-core
-		CUDA::cudart
-		Boost::container
-		Boost::intrusive
-		Boost::unordered
-		spdlog::spdlog
-)
-
-# The unitary tests reach the plugin's internals, which have no installed
-# headers, so they include them from here.
-target_include_directories(
-	${OBJECTS_NAME}
-	PUBLIC
-		${CMAKE_CURRENT_SOURCE_DIR}
+	PRIVATE
+		${DEPS_NAME}
 )
 
 # Enable all warnings during compilation
@@ -52,11 +69,6 @@ if(MSVC)
 	target_compile_options(${OBJECTS_NAME} PRIVATE /W4)
 else()
 	target_compile_options(${OBJECTS_NAME} PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-
-# Disable min/max macros in windows
-if(MSVC)
-	target_compile_definitions(${OBJECTS_NAME} PUBLIC -DNOMINMAX)
 endif()
 
 # Create the plugin. It is only loaded at runtime by the core's plugin manager
@@ -71,7 +83,7 @@ set_target_properties(
 target_link_libraries(
 	${TARGET_NAME}
 	PRIVATE
-		${OBJECTS_NAME}
+		${DEPS_NAME}
 )
 
 # Install the plugin binary. No headers and no exported config: the plugin has
