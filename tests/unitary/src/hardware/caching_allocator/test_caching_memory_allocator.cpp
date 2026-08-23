@@ -262,7 +262,7 @@ TEST_CASE(
 
 	// Taken and dropped, so the allocator is holding a heap it is not using.
 	fixture.get().allocate(min_heap, alignment, queue);
-	REQUIRE( fixture.get().get_pool_size() == min_heap );
+	REQUIRE( fixture.get_arena().get_used_bytes() == min_heap );
 
 	// More than what is left, but not more than the device has. The only way
 	// through is to hand the idle heap back first.
@@ -374,10 +374,9 @@ TEST_CASE(
 	SECTION( "all of it when nothing is in use" )
 	{
 		fixture.get().allocate(1024, alignment, queue);
-		REQUIRE( fixture.get().get_pool_size() == min_heap );
+		REQUIRE( fixture.get_arena().get_used_bytes() == min_heap );
 
 		CHECK( fixture.get().trim() == min_heap );
-		CHECK( fixture.get().get_pool_size() == 0 );
 		CHECK( fixture.get_arena().get_region_count() == 0 );
 	}
 
@@ -386,7 +385,7 @@ TEST_CASE(
 		auto held = fixture.get().allocate(1024, alignment, queue);
 
 		CHECK( fixture.get().trim() == 0 );
-		CHECK( fixture.get().get_pool_size() == min_heap );
+		CHECK( fixture.get_arena().get_used_bytes() == min_heap );
 	}
 }
 
@@ -407,7 +406,7 @@ TEST_CASE(
 		auto b = fixture.get().allocate(min_heap / 2, alignment, second);
 	}
 
-	REQUIRE( fixture.get().get_pool_size() == min_heap );
+	REQUIRE( fixture.get_arena().get_used_bytes() == min_heap );
 
 	// Waiting for both queues makes the two answers to "when is this safe" the
 	// same one, and the halves add back up to the heap they came from.
@@ -415,5 +414,5 @@ TEST_CASE(
 		.TIMES(2);
 
 	CHECK( fixture.get().trim() == min_heap );
-	CHECK( fixture.get().get_pool_size() == 0 );
+	CHECK( fixture.get_arena().get_region_count() == 0 );
 }

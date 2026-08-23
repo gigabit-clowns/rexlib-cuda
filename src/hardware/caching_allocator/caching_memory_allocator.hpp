@@ -137,14 +137,6 @@ public:
 	 */
 	std::size_t trim();
 
-	/**
-	 * @brief Get how much memory the allocator is holding.
-	 *
-	 * @return std::size_t Total size of its heaps, in bytes, whether handed
-	 * out or not.
-	 */
-	std::size_t get_pool_size() const;
-
 private:
 	const memory_resource *m_resource;
 	std::unique_ptr<memory_source> m_source;

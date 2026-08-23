@@ -180,13 +180,6 @@ std::size_t caching_memory_allocator::trim()
 	return trim_locked();
 }
 
-std::size_t caching_memory_allocator::get_pool_size() const
-{
-	// The pool's size is readable on its own, which is what spares this the
-	// lock and the allocator a mutable member.
-	return m_pool.get_size();
-}
-
 memory_block& caching_memory_allocator::acquire_block(
 	std::size_t size,
 	const queue_handle &queue

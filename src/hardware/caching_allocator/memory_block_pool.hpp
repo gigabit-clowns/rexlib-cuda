@@ -4,7 +4,6 @@
 
 #include "memory_block.hpp"
 
-#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <utility>
@@ -165,9 +164,6 @@ public:
 	 *
 	 * @return std::size_t Total size of the heaps, in bytes, whether their
 	 * blocks are handed out or not.
-	 *
-	 * @note Readable without holding whatever lock the rest of the pool is
-	 * used under, in which case it is a snapshot rather than a promise.
 	 */
 	std::size_t get_size() const noexcept;
 
@@ -219,10 +215,7 @@ private:
 	memory_block_list_type m_blocks;
 	free_memory_block_set_type m_free_blocks;
 	heap_map_type m_heaps;
-
-	/// Atomic only so that it can be read without taking the lock the rest of
-	/// the pool needs, which is all anyone ever wants of it.
-	std::atomic<std::size_t> m_size;
+	std::size_t m_size;
 
 	memory_block* find_in_queue(
 		std::size_t size,

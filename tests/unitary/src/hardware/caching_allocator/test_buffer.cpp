@@ -121,7 +121,7 @@ TEST_CASE(
 	// has to be served out of memory taken from the driver instead.
 	auto second = fixture.get().allocate(min_heap, alignment, own);
 	CHECK( cuda::buffer::cast(*second).get_device_ptr() != first_data );
-	CHECK( fixture.get().get_pool_size() == 2 * min_heap );
+	CHECK( fixture.get_arena().get_used_bytes() == 2 * min_heap );
 
 	// Once the queue that was using it has caught up, it goes back into the
 	// pool like any other block.
