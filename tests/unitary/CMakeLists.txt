@@ -5,9 +5,9 @@ set(TESTS_NAME "${PROJECT_NAME}_unitary_tests")
 
 # Register all source and header files
 file(
-	GLOB_RECURSE 
-	TEST_SOURCES 
-		${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp 
+	GLOB_RECURSE
+	TEST_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
 		${CMAKE_CURRENT_SOURCE_DIR}/src/*.c
 )
 
@@ -17,25 +17,18 @@ add_executable(
     ${TEST_SOURCES}
 )
 set_target_properties(
-	${TESTS_NAME} PROPERTIES 
+	${TESTS_NAME} PROPERTIES
 	CXX_STANDARD 20
 )
+# The plugin itself is a MODULE and cannot be linked against, so the tests
+# consume the same objects it is built from.
 target_link_libraries(
-	${TESTS_NAME} 
-	PRIVATE 
-		${PROJECT_NAME} 
+	${TESTS_NAME}
+	PRIVATE
+		${PROJECT_NAME}-objects
 		Catch2::Catch2WithMain
 		trompeloeil::trompeloeil
 )
-
-# On windows targets, copy the library to the test directory
-if(WIN32)
-	add_custom_command(TARGET ${TESTS_NAME}
-		POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}> "${CMAKE_CURRENT_BINARY_DIR}"
-		COMMENT "Copy DLL file to ${CMAKE_CURRENT_BINARY_DIR} directory" VERBATIM
-	)
-endif()
 
 # Discover tests
 catch_discover_tests(${TESTS_NAME})

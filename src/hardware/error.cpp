@@ -5,6 +5,7 @@
 #include "error.hpp"
 
 #include <cstdio>
+#include <new>
 #include <sstream>
 
 namespace xmipp4
@@ -36,6 +37,21 @@ void check(
 	{
 		throw error(format_error(code, call, file, line));
 	}
+}
+
+void check_allocation(
+	cudaError_t code,
+	const char* call,
+	const char* file,
+	int line
+)
+{
+	if (code == cudaErrorMemoryAllocation)
+	{
+		throw std::bad_alloc();
+	}
+
+	check(code, call, file, line);
 }
 
 void check_no_throw(

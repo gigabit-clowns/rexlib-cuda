@@ -36,6 +36,15 @@ target_link_libraries(
 		Boost::container
 		Boost::intrusive
 		Boost::unordered
+		spdlog::spdlog
+)
+
+# The unitary tests reach the plugin's internals, which have no installed
+# headers, so they include them from here.
+target_include_directories(
+	${OBJECTS_NAME}
+	PUBLIC
+		${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # Enable all warnings during compilation
