@@ -54,13 +54,13 @@ jobs:
           sub-packages: ${{ runner.os=='Linux' && '["nvcc", "cudart-dev"]' || '[]' }} # Fake ternary operator
           log-file-suffix: '${{matrix.os}}-${{matrix.compiler.cc}}-${{matrix.cuda}}.txt'
 
-      - name: Install xmipp4-core
+      - name: Install rexlib
         working-directory: ${{ github.workspace }}/../
         run: |
-          git clone https://github.com/gigabit-clowns/xmipp4-core.git
-          cd xmipp4-core
+          git clone https://github.com/gigabit-clowns/rexlib.git
+          cd rexlib
           git checkout tags/development
-          pip install --only-binary :all: --no-index --find-links=dist xmipp4-core
+          pip install --only-binary :all: --no-index --find-links=dist rexlib
 
       - name: Configure and build with CMake
         uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406 # v2

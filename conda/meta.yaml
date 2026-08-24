@@ -7,11 +7,11 @@
 {% set version = version_match[1] %}
 
 package:
-  name: xmipp4-cuda
+  name: rexlib-cuda
   version: "0.1.0"
 
 about:
-  summary: MPI Collective Communications library for xmipp4
+  summary: CUDA hardware backend for rexlib
   license_file: LICENSE
 
 source:
@@ -19,13 +19,13 @@ source:
 
 requirements:
   run:
-    - xmipp4-core=0.1
+    - rexlib=0.1
 
   host:
     - python
     - pip
     - scikit-build-core
-    - xmipp4-core=0.1
+    - rexlib=0.1
 
   build:
     - {{ compiler('c') }}

@@ -66,7 +66,7 @@ jobs:
             CUDAHOSTCXX=/usr/bin/g++
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
             auditwheel repair -w {dest_dir} {wheel}
-            --exclude "libxmipp4-core.so*"
+            --exclude "librexlib.so*"
             --exclude "libcudart.so*"
 
       - name: Upload wheels
