@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "scikit-build-core==1.0.3",
-    "rexlib-native @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when rexlib-native is in PyPI
+    "librexlib @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when librexlib is in PyPI
 ]
 build-backend = "scikit_build_core.build"
 
@@ -30,7 +30,7 @@ license = {file = "LICENSE"}
 
 requires-python = ">=3.9"
 dependencies = [ 
-    "rexlib-native @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when rexlib-native is in PyPI
+    "librexlib @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when librexlib is in PyPI
 ]
 
 [project.urls]
