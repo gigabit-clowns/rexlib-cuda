@@ -1,12 +1,15 @@
 [build-system]
 requires = [
     "scikit-build-core==1.0.3",
-    "librexlib @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when librexlib is in PyPI
+    "rexlib==0.1.*",
+    # cudart alone does not compile: cuda_runtime.h includes
+    # crt/host_config.h, which ships in the nvcc package.
+    "cuda-toolkit[cudart,nvcc]==12.*"
 ]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "rexlib-cuda"
+name = "rexlib-cuda12"
 dynamic = ["version"]
 authors = [
     { name = "Oier Lauzirika Zarrabeitia", email = "oierlauzi@bizkaia.eu" },
@@ -29,16 +32,15 @@ readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
 
 requires-python = ">=3.9"
-dependencies = [ 
-    "librexlib @ https://github.com/gigabit-clowns/rexlib/archive/refs/heads/main.zip" # TODO replace when librexlib is in PyPI
+dependencies = [
+    "rexlib==0.1.*",
+    "cuda-toolkit[cudart]==12.*"
 ]
 
 [project.urls]
 Homepage = "https://github.com/gigabit-clowns/rexlib-cuda"
 
 [tool.scikit-build]
-experimental=true # For wheel.install-dir
-wheel.install-dir="/data"
 wheel.py-api = "py3" # Python version agnostic
 cmake.version = ">=3.16"
 build.verbose = false
