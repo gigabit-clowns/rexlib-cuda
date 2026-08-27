@@ -39,8 +39,8 @@ macro(find_rexlib)
 
 	if(NOT rexlib_FOUND)
 		message(FATAL_ERROR
-			"rexlib not found. Install it system-wide, or with "
-			"'pip install rexlib'."
+			"rexlib not found. Install it system-wide, point CMAKE_PREFIX_PATH "
+			"at a release archive, or install it with 'pip install rexlib'."
 		)
 	endif()
 endmacro()

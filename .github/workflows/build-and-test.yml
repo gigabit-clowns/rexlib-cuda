@@ -32,9 +32,7 @@ jobs:
         - os: windows-latest
           compiler: {cc: cl, cxx: cl}
           cuda: 13.3.1
-          # Debug here would pair this plugin's /MDd with the /MD of the
-          # prebuilt core wheel, which is always built Release.
-          build_type: Release
+          build_type: Debug
   
     runs-on: ${{ matrix.os }}
     env:
@@ -54,10 +52,21 @@ jobs:
           sub-packages: ${{ runner.os=='Linux' && '["nvcc", "cudart-dev"]' || '[]' }} # Fake ternary operator
           log-file-suffix: '${{matrix.os}}-${{matrix.compiler.cc}}-${{matrix.cuda}}.txt'
 
-      - name: Install rexlib
-        # Carries the C++ library, its headers and its CMake package
-        # configuration inside the Python package.
-        run: pip install rexlib==0.1.*
+      - name: Download rexlib
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # The archive has to match how this plugin is built: on Windows the
+          # two configurations are not one ABI.
+          PLATFORM: ${{ runner.os == 'Windows' && 'windows-x86_64' || 'linux-x86_64' }}
+          CONFIG: ${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+        run: |
+          gh release download development \
+            --repo gigabit-clowns/rexlib \
+            --pattern "rexlib-*-$PLATFORM-$CONFIG.*" \
+            --dir rexlib-archive
+          mkdir rexlib-prefix
+          # bsdtar reads the zip archives too, so this covers both platforms.
+          tar -xf rexlib-archive/rexlib-*-$PLATFORM-$CONFIG.* -C rexlib-prefix
 
       - name: Configure and build with CMake
         uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406 # v2
@@ -69,6 +78,7 @@ jobs:
           options: |
             CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             CMAKE_EXPORT_COMPILE_COMMANDS=ON
+            CMAKE_PREFIX_PATH=${{ github.workspace }}/rexlib-prefix
           run-build: true
           build-args: --config ${{ env.BUILD_TYPE }}
 
