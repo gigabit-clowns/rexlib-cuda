@@ -41,6 +41,9 @@ dependencies = [
 Homepage = "https://github.com/gigabit-clowns/rexlib-cuda"
 
 [tool.scikit-build]
+# rexlib reports its plugin directory relative to its own prefix, which
+# inside a wheel is the rexlib package rather than site-packages.
+wheel.install-dir = "rexlib"
 wheel.py-api = "py3" # Python version agnostic
 cmake.version = ">=3.16"
 build.verbose = false
