@@ -75,7 +75,7 @@ jobs:
           options: |
             CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             CMAKE_EXPORT_COMPILE_COMMANDS=ON
-            CMAKE_PREFIX_PATH=${{ runner.temp }}/rexlib
+            rexlib_ROOT=${{ runner.temp }}/rexlib
           run-build: true
           build-args: --config ${{ env.BUILD_TYPE }}
 

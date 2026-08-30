@@ -83,7 +83,7 @@ jobs:
           CIBW_ENVIRONMENT: >
             CUDAHOSTCXX=/usr/bin/g++
             CUDACXX=${{ matrix.cuda-major.home }}/bin/nvcc
-            CMAKE_PREFIX_PATH=/tmp/rexlib
+            rexlib_ROOT=/tmp/rexlib
             SKBUILD_CMAKE_DEFINE="REXLIB_CUDA_RUNTIME_RPATH=$ORIGIN/../../../nvidia/${{ matrix.cuda-major.runtime-dir }}/lib"
           CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
             auditwheel repair -w {dest_dir} {wheel}
