@@ -24,15 +24,7 @@ include(fetch_spdlog)
 # their mercy.
 option(REXLIB_CUDA_BUILD_TESTING "Build this project's tests" ${BUILD_TESTING})
 
-# Installing is for whoever owns the install prefix. A superbuild that pulls
-# this in as a subproject owns its own.
-if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
-	set(REXLIB_CUDA_INSTALL_DEFAULT ON)
-else()
-	set(REXLIB_CUDA_INSTALL_DEFAULT OFF)
-endif()
-option(REXLIB_CUDA_INSTALL "Generate install rules" ${REXLIB_CUDA_INSTALL_DEFAULT})
-unset(REXLIB_CUDA_INSTALL_DEFAULT)
+option(REXLIB_CUDA_INSTALL "Generate install rules" ON)
 
 set(REXLIB_CUDA_REXLIB_VERSION 0.1 CACHE STRING
 	"Version of rexlib this plugin requires")
