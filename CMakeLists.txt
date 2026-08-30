@@ -19,9 +19,6 @@ include(fetch_spdlog)
 # Options
 # ---------------------------------------------------------------------------
 
-# Its own option rather than BUILD_TESTING: dependencies of dependencies
-# write that one into the cache, and this project's tests should not be at
-# their mercy.
 option(REXLIB_CUDA_BUILD_TESTING "Build this project's tests" ${BUILD_TESTING})
 
 option(REXLIB_CUDA_INSTALL "Generate install rules" ON)
@@ -48,17 +45,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 # CUDA is enabled here rather than in project() because the architectures
 # have to be settled first: left to itself nvcc picks a default by looking
 # for a local GPU, which no build machine has. One fat binary per major
-# instead. Spelling the list out would rot, as CUDA 12 dropped sm_35 and
-# sm_37 and CUDA 13 dropped Maxwell, Pascal and Volta.
+# instead. Spelling the list out would rot.
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
 	set(CMAKE_CUDA_ARCHITECTURES all-major)
 endif()
 enable_language(CUDA)
 
-# Only a real toolkit can build this. NVIDIA's runtime wheels ship
-# libcudart.so.<major> with no development symlink, so find_library never
-# matches them, and their nvcc package carries a compiler driver only from
-# CUDA 13 on. They are a way to ship the runtime, not to compile with.
 find_package(CUDAToolkit 11 REQUIRED)
 
 fetch_boost(VERSION 1.92.0)
