@@ -1,7 +1,7 @@
 [build-system]
-# rexlib is not a build requirement: it is found through CMAKE_PREFIX_PATH,
-# which CI points at the prefix it builds from external/rexlib. Requiring
-# the wheel here would also make this unbuildable until rexlib is published.
+# HACK: rexlib is not set as build requirement: it is found through 
+# CMAKE_PREFIX_PATH, which CI points at the prefix it builds from 
+# external/rexlib. Add rexlib when it is published.
 requires = ["scikit-build-core==1.0.3"]
 build-backend = "scikit_build_core.build"
 
