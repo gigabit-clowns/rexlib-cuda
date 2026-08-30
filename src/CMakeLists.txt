@@ -17,7 +17,7 @@ target_link_libraries(
 	${DEPS_NAME}
 	INTERFACE
 		rexlib::rexlib
-		rexlib-cuda::cudart
+		CUDA::cudart
 		Boost::container
 		Boost::intrusive
 		Boost::unordered
@@ -92,12 +92,16 @@ target_link_libraries(
 		${DEPS_NAME}
 )
 
-# Install the plugin binary. No headers and no exported config: the plugin has
-# no public interface. rexlib owns where a plugin goes and how it reaches
-# the library, so the destination and the RPATH come from its exported
-# helper rather than being restated here.
-rexlib_install_plugin(${TARGET_NAME})
+if(REXLIB_CUDA_RUNTIME_RPATH)
+	set_property(
+		TARGET ${TARGET_NAME}
+		APPEND PROPERTY INSTALL_RPATH "${REXLIB_CUDA_RUNTIME_RPATH}"
+	)
+endif()
 
-# When the CUDA runtime came from a pip wheel it lives under site-packages
-# rather than on a system path, so the plugin needs a way back to it.
-rexlib_cuda_add_runtime_rpath(${TARGET_NAME})
+# No headers and no exported config: the plugin has no public interface.
+# rexlib owns where a plugin goes and how it reaches the library, so the
+# destination and the RPATH back to it come from its exported helper.
+if(REXLIB_CUDA_INSTALL)
+	rexlib_install_plugin(${TARGET_NAME})
+endif()
