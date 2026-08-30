@@ -36,11 +36,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 # ---------------------------------------------------------------------------
 
 # CUDA is enabled here rather than in project() because the architectures
-# have to be settled first: left to itself nvcc picks a default by looking
-# for a local GPU, which no build machine has. One fat binary per major
-# instead. Spelling the list out would rot.
+# have to be settled first.
 if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-	set(CMAKE_CUDA_ARCHITECTURES all-major)
+	set(CMAKE_CUDA_ARCHITECTURES all-major) # Requires CMake 3.23.
 endif()
 enable_language(CUDA)
 

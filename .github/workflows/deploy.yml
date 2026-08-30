@@ -21,11 +21,10 @@ jobs:
     name: Build wheels for manylinux_${{ matrix.platform.architecture }} cuda${{ matrix.cuda-major.version }}
     strategy:
       matrix:
-        # One build per CUDA major, not per minor: minor version
-        # compatibility makes the extra builds redundant, and the runtime
-        # now travels with the wheel so only the driver floor differs
-        # (r450+ for 11, r525+ for 12, r580+ for 13).
-        # runtime-dir is where NVIDIA's runtime wheel unpacks, which the
+        # One build per CUDA major: minor version compatibility makes the extra 
+		# builds redundant, and the runtime now travels with the wheel so only 
+		# the driver floor differs.
+        # (runtime-dir is where NVIDIA's runtime wheel unpacks, which the
         # plugin needs an RPATH to. It was renamed at CUDA 13.
         cuda-major:
         - {version: 11, package: 11-8, home: /usr/local/cuda-11.8, runtime-dir: cuda_runtime}
