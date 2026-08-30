@@ -1,10 +1,8 @@
 [build-system]
-requires = [
-    "scikit-build-core==1.0.3",
-    # For the headers and CMake package to build against. Point
-    # CMAKE_PREFIX_PATH at rexlib.get_cmake_dir() to use this copy.
-    "rexlib==0.1.*"
-]
+# rexlib is not a build requirement: it is found through CMAKE_PREFIX_PATH,
+# which CI points at the prefix it builds from external/rexlib. Requiring
+# the wheel here would also make this unbuildable until rexlib is published.
+requires = ["scikit-build-core==1.0.3"]
 build-backend = "scikit_build_core.build"
 
 [project]
