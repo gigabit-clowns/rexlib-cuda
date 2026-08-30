@@ -26,7 +26,7 @@ option(REXLIB_CUDA_INSTALL "Generate install rules" ON)
 set(REXLIB_CUDA_REXLIB_VERSION 0.1 CACHE STRING
 	"Version of rexlib this plugin requires")
 
-set(REXLIB_CUDA_RUNTIME_RPATH "" CACHE STRING "RPATH entry reaching the CUDA runtime)
+set(REXLIB_CUDA_RUNTIME_RPATH "" CACHE STRING "RPATH entry reaching the CUDA runtime")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
