@@ -1,10 +1,9 @@
 [build-system]
 requires = [
     "scikit-build-core==1.0.3",
-    "rexlib==0.1.*",
-    # cudart alone does not compile: cuda_runtime.h includes
-    # crt/host_config.h, which ships in the nvcc package.
-    "cuda-toolkit[cudart,nvcc]==12.*"
+    # For the headers and CMake package to build against. Point
+    # CMAKE_PREFIX_PATH at rexlib.get_cmake_dir() to use this copy.
+    "rexlib==0.1.*"
 ]
 build-backend = "scikit_build_core.build"
 
@@ -45,12 +44,16 @@ Homepage = "https://github.com/gigabit-clowns/rexlib-cuda"
 # inside a wheel is the rexlib package rather than site-packages.
 wheel.install-dir = "rexlib"
 wheel.py-api = "py3" # Python version agnostic
-cmake.version = ">=3.16"
+cmake.version = ">=3.23"
+
+# git ls-files does not report a submodule's contents, so the rexlib source
+# has to be named explicitly or the sdist would carry an empty directory.
+sdist.include = ["external/rexlib/**"]
 build.verbose = false
 cmake.build-type = "Release"
 
 [tool.scikit-build.cmake.define]
-BUILD_TESTING = "OFF"
+REXLIB_CUDA_BUILD_TESTING = "OFF"
 
 [tool.scikit-build.metadata.version]
 provider = "scikit_build_core.metadata.regex"

@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          submodules: true
 
       - uses: Jimver/cuda-toolkit@b8bf9c6c28f8a92fbb04dcfcaee872e60c57462d # v0.2.36
         id: cuda-toolkit
@@ -52,21 +54,16 @@ jobs:
           sub-packages: ${{ runner.os=='Linux' && '["nvcc", "cudart-dev"]' || '[]' }} # Fake ternary operator
           log-file-suffix: '${{matrix.os}}-${{matrix.compiler.cc}}-${{matrix.cuda}}.txt'
 
-      - name: Download rexlib
-        env:
-          GH_TOKEN: ${{ github.token }}
-          # The archive has to match how this plugin is built: on Windows the
-          # two configurations are not one ABI.
-          PLATFORM: ${{ runner.os == 'Windows' && 'windows-x86_64' || 'linux-x86_64' }}
-          CONFIG: ${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+      - name: Install rexlib
         run: |
-          gh release download development \
-            --repo gigabit-clowns/rexlib \
-            --pattern "rexlib-*-$PLATFORM-$CONFIG.*" \
-            --dir rexlib-archive
-          mkdir rexlib-prefix
-          # bsdtar reads the zip archives too, so this covers both platforms.
-          tar -xf rexlib-archive/rexlib-*-$PLATFORM-$CONFIG.* -C rexlib-prefix
+          python -m pip install "cmake>=3.23" ninja
+          cmake -S external/rexlib -B "${{ runner.temp }}/rexlib-build" \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_INSTALL_PREFIX="${{ runner.temp }}/rexlib" \
+            -DCMAKE_INSTALL_LIBDIR=lib \
+            -DBUILD_TESTING=OFF
+          cmake --build "${{ runner.temp }}/rexlib-build" \
+            --config ${{ env.BUILD_TYPE }} --target install --parallel 4
 
       - name: Configure and build with CMake
         uses: threeal/cmake-action@725d1314ccf9ea922805d7e3f9d9bcbca892b406 # v2
@@ -78,7 +75,7 @@ jobs:
           options: |
             CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             CMAKE_EXPORT_COMPILE_COMMANDS=ON
-            CMAKE_PREFIX_PATH=${{ github.workspace }}/rexlib-prefix
+            CMAKE_PREFIX_PATH=${{ runner.temp }}/rexlib
           run-build: true
           build-args: --config ${{ env.BUILD_TYPE }}
 

@@ -44,7 +44,7 @@ set(REXLIB_CUDA_REXLIB_VERSION 0.1 CACHE STRING
 # major. Whoever builds such a wheel knows that path; nothing here can.
 set(REXLIB_CUDA_RUNTIME_RPATH "" CACHE STRING
 	"RPATH entry reaching the CUDA runtime, for example \
-$ORIGIN/../../../../nvidia/cuda_runtime/lib")
+$ORIGIN/../../../nvidia/cuda_runtime/lib")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
