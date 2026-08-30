@@ -34,17 +34,10 @@ endif()
 option(REXLIB_CUDA_INSTALL "Generate install rules" ${REXLIB_CUDA_INSTALL_DEFAULT})
 unset(REXLIB_CUDA_INSTALL_DEFAULT)
 
-set(REXLIB_CUDA_REXLIB_VERSION 0.1 CACHE STRING
-	"Version of rexlib this plugin requires")
-
-# The CUDA runtime is linked by SONAME, so it is found wherever the loader
-# already looks. A wheel is the exception: it declares a dependency on
-# NVIDIA's runtime wheel, which unpacks beside the package rather than onto
-# any search path, and the directory it unpacks into differs per CUDA
-# major. Whoever builds such a wheel knows that path; nothing here can.
-set(REXLIB_CUDA_RUNTIME_RPATH "" CACHE STRING
-	"RPATH entry reaching the CUDA runtime, for example \
-$ORIGIN/../../../nvidia/cuda_runtime/lib")
+# Find dependencies
+find_package(CUDAToolkit 11 REQUIRED)
+fetch_boost(VERSION 1.92.0)
+fetch_spdlog(VERSION 1.17.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
