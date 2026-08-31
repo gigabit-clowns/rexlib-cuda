@@ -19,8 +19,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "Operating System :: POSIX",
-    "Operating System :: MacOS",
-    "Operating System :: Windows",
     "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Programming Language :: C++"
 ]
@@ -44,9 +42,6 @@ wheel.install-dir = "rexlib"
 wheel.py-api = "py3" # Python version agnostic
 cmake.version = ">=3.23"
 
-# git ls-files does not report a submodule's contents, so the rexlib source
-# has to be named explicitly or the sdist would carry an empty directory.
-sdist.include = ["external/rexlib/**"]
 build.verbose = false
 cmake.build-type = "Release"
 

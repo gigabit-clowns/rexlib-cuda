@@ -22,8 +22,8 @@ jobs:
     strategy:
       matrix:
         # One build per CUDA major: minor version compatibility makes the extra 
-		# builds redundant, and the runtime now travels with the wheel so only 
-		# the driver floor differs.
+        # builds redundant, and the runtime now travels with the wheel so only 
+        # the driver floor differs.
         # (runtime-dir is where NVIDIA's runtime wheel unpacks, which the
         # plugin needs an RPATH to. It was renamed at CUDA 13.
         cuda-major:
@@ -95,23 +95,9 @@ jobs:
           name: cibw-wheels-manylinux-${{ matrix.platform.architecture }}-cuda${{ matrix.cuda-major.version }}
           path: ./wheelhouse/*.whl
 
-  build_sdist:
-    name: Build source distribution
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - name: Build sdist
-        run: pipx run build --sdist
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: cibw-sdist
-          path: dist/*.tar.gz
-
   upload_pypi:
     name: Upload to PyPI
-    needs: [build_sdist, build_wheel_manylinux]
+    needs: [build_wheel_manylinux]
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
@@ -130,7 +116,7 @@ jobs:
 
   create_developer_release:
     name: Create development release
-    needs: [build_wheel_manylinux, build_sdist]
+    needs: [build_wheel_manylinux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
