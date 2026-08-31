@@ -1,41 +1,62 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.23)
 
-# Define the project
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION PROJECT_VERSION)
 string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
 project(
-  xmipp4-cuda
+	rexlib-cuda
 	VERSION ${PROJECT_VERSION}
-	LANGUAGES C CXX CUDA
+	LANGUAGES C CXX
 )
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
-# Include CMake packages
-include(GNUInstallDirs)
 include(CTest)
-
+include(GNUInstallDirs)
 include(fetch_boost)
 include(fetch_spdlog)
 
-# Find xmipp4-core
-if(NOT TARGET xmipp4-core)
-	find_package(xmipp4-core REQUIRED)
-endif()
+# ---------------------------------------------------------------------------
+# Options
+# ---------------------------------------------------------------------------
 
-# Find dependencies
-find_package(CUDAToolkit 11 REQUIRED)
-fetch_boost(VERSION 1.92.0)
-fetch_spdlog(VERSION 1.17.0)
+option(REXLIB_CUDA_BUILD_TESTING "Build this project's tests" ${BUILD_TESTING})
 
-# Set project-wide compilation options
+option(REXLIB_CUDA_INSTALL "Generate install rules" ON)
+
+set(REXLIB_CUDA_REXLIB_VERSION 0.1 CACHE STRING
+	"Version of rexlib this plugin requires")
+
+set(REXLIB_CUDA_RUNTIME_RPATH "" CACHE STRING "RPATH entry reaching the CUDA runtime")
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 
-# Add source directory
+# ---------------------------------------------------------------------------
+# Dependencies
+# ---------------------------------------------------------------------------
+
+# CUDA is enabled here rather than in project() because the architectures
+# have to be settled first.
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+	set(CMAKE_CUDA_ARCHITECTURES all-major) # Requires CMake 3.23.
+endif()
+enable_language(CUDA)
+
+find_package(CUDAToolkit 11 REQUIRED)
+
+fetch_boost(VERSION 1.92.0)
+fetch_spdlog(VERSION 1.17.0)
+
+if(NOT TARGET rexlib::rexlib)
+	find_package(rexlib ${REXLIB_CUDA_REXLIB_VERSION} REQUIRED)
+endif()
+
+# ---------------------------------------------------------------------------
+# The plugin
+# ---------------------------------------------------------------------------
+
 add_subdirectory(src)
 
-# Only build tests if it is the main project
-if(BUILD_TESTING)
+if(REXLIB_CUDA_BUILD_TESTING)
 	add_subdirectory(tests)
 endif()
