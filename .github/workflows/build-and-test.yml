@@ -78,6 +78,12 @@ jobs:
           key: ${{ matrix.os }}-${{ matrix.compiler.cxx }}-${{ matrix.cuda }}
           max-size: 1G
 
+      - name: Restore the fetched sources
+        id: fetched
+        uses: gigabit-clowns/.github/.github/composites/restore-fetched@main
+        with:
+          key: ${{ hashFiles('CMakeLists.txt', 'cmake/modules/*.cmake', 'tests/CMakeLists.txt', 'external/rexlib/CMakeLists.txt', 'external/rexlib/cmake/modules/*.cmake') }}
+
       - name: Install rexlib
         env:
           CMAKE_GENERATOR: Ninja
@@ -87,6 +93,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX="${{ runner.temp }}/rexlib" \
             -DCMAKE_INSTALL_LIBDIR=lib \
             -DBUILD_TESTING=OFF \
+            -DFETCHCONTENT_BASE_DIR=${{ steps.fetched.outputs.dir }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build "${{ runner.temp }}/rexlib-build" \
@@ -104,10 +111,15 @@ jobs:
             CMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
             CMAKE_EXPORT_COMPILE_COMMANDS=ON
             rexlib_ROOT=${{ runner.temp }}/rexlib
+            FETCHCONTENT_BASE_DIR=${{ steps.fetched.outputs.dir }}
             CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
           run-build: true
           build-args: --config ${{ env.BUILD_TYPE }}
+
+      - name: Save the fetched sources
+        if: github.ref == 'refs/heads/main'
+        uses: gigabit-clowns/.github/.github/composites/save-fetched@main
 
       - name: Save the compiler cache
         if: github.ref == 'refs/heads/main'
