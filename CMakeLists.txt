@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.18)
 
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/VERSION PROJECT_VERSION)
 string(STRIP "${PROJECT_VERSION}" PROJECT_VERSION)
@@ -14,6 +14,7 @@ include(CTest)
 include(GNUInstallDirs)
 include(fetch_boost)
 include(fetch_spdlog)
+include(cuda_architectures)
 
 # ---------------------------------------------------------------------------
 # Options
@@ -35,14 +36,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED OFF)
 # Dependencies
 # ---------------------------------------------------------------------------
 
-# CUDA is enabled here rather than in project() because the architectures
-# have to be settled first.
-if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-	set(CMAKE_CUDA_ARCHITECTURES all-major) # Requires CMake 3.23.
-endif()
-enable_language(CUDA)
-
+# CUDA is enabled here rather than in project() because the architectures have
+# to be settled first, and the compiler is what reports them. enable_language()
+# would otherwise pick a default and leave nothing to settle.
 find_package(CUDAToolkit 11 REQUIRED)
+
+if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+	cuda_all_major_architectures(
+		CMAKE_CUDA_ARCHITECTURES "${CUDAToolkit_NVCC_EXECUTABLE}"
+	)
+endif()
+
+enable_language(CUDA)
 
 fetch_boost(VERSION 1.92.0)
 fetch_spdlog(VERSION 1.17.0)
