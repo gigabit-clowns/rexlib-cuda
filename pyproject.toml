@@ -40,7 +40,7 @@ Homepage = "https://github.com/gigabit-clowns/rexlib-cuda"
 # inside a wheel is the rexlib package rather than site-packages.
 wheel.install-dir = "rexlib"
 wheel.py-api = "py3" # Python version agnostic
-cmake.version = ">=3.23"
+cmake.version = ">=3.18"
 
 build.verbose = false
 cmake.build-type = "Release"
