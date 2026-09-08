@@ -28,6 +28,10 @@ on:
 
   workflow_dispatch:
 
+concurrency:
+  group: deploy-release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_wheel_manylinux:
     name: Build wheels for manylinux_${{ matrix.platform.architecture }} cuda${{ matrix.cuda-major.version }}
