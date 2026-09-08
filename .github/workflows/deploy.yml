@@ -98,6 +98,7 @@ jobs:
             yum clean all
             yum -y install cuda-toolkit-${{ matrix.cuda-major.package }}
             python -m pip install "cmake>=3.23" ninja
+            export CMAKE_GENERATOR=Ninja
             export CCACHE_DIR=/host/tmp/ccache CCACHE_BASEDIR=/ \
               CCACHE_NOHASHDIR=1 CCACHE_MAXSIZE=2G \
               CCACHE_SLOPPINESS=time_macros,include_file_mtime,include_file_ctime,locale

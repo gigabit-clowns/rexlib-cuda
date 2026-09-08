@@ -91,6 +91,7 @@ jobs:
       - name: Install rexlib
         env:
           CMAKE_GENERATOR: Ninja
+          MSVC_DEBUG_FORMAT: ${{ matrix.compiler.cxx == 'cl' && '-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded' || '' }}
         run: |
           cmake -S external/rexlib -B "${{ runner.temp }}/rexlib-build" \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
@@ -99,7 +100,8 @@ jobs:
             -DBUILD_TESTING=OFF \
             -DFETCHCONTENT_BASE_DIR=${{ steps.fetched.outputs.dir }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            $MSVC_DEBUG_FORMAT
           cmake --build "${{ runner.temp }}/rexlib-build" \
             --config ${{ env.BUILD_TYPE }} --target install --parallel 4
 
@@ -118,6 +120,7 @@ jobs:
             FETCHCONTENT_BASE_DIR=${{ steps.fetched.outputs.dir }}
             CMAKE_C_COMPILER_LAUNCHER=ccache
             CMAKE_CXX_COMPILER_LAUNCHER=ccache
+            ${{ matrix.compiler.cxx == 'cl' && 'CMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded' || '' }}
           run-build: true
           build-args: --config ${{ env.BUILD_TYPE }}
 
