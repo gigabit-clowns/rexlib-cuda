@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.15) # list(POP_BACK)
 
-# Reproduces the CMAKE_CUDA_ARCHITECTURES value "all-major" of CMake 3.23, so
-# that the plugin can also be configured by older CMake. The compiler is asked
-# what it supports rather than deduced from its version, so that toolkits newer
-# than this file need no changes here.
+# Reproduces the CMAKE_CUDA_ARCHITECTURES value "all-major" of CMake 3.23.
 function(cuda_all_major_architectures out_var compiler)
 	execute_process(
 		COMMAND ${compiler} --list-gpu-arch

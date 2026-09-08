@@ -24,8 +24,6 @@ jobs:
         # One build per CUDA major: minor version compatibility makes the extra 
         # builds redundant, and the runtime now travels with the wheel so only 
         # the driver floor differs.
-        # (runtime-dir is where NVIDIA's runtime wheel unpacks, which the
-        # plugin needs an RPATH to. It was renamed at CUDA 13.
         cuda-major:
         - {version: 11, package: 11-8, home: /usr/local/cuda-11.8, runtime-dir: cuda_runtime}
         - {version: 12, package: 12-9, home: /usr/local/cuda-12.9, runtime-dir: cuda_runtime}
@@ -60,12 +58,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.platform.architecture }}
           CIBW_BUILD: "cp313-manylinux*" # Python agnostic, pick any version
           CIBW_BUILD_VERBOSITY: 1
-          # A toolkit for every major, not just the older ones: NVIDIA's
-          # nvcc wheels cannot build this at any version, since the runtime
-          # they pair with ships no development symlink for find_library to
-          # match. They carry the runtime the wheel depends on, nothing more.
-          # rexlib is built once here too, so each wheel only compiles the
-          # plugin. Based on: https://stackoverflow.com/a/77212119
+          # Based on: https://stackoverflow.com/a/77212119
           CIBW_BEFORE_ALL: |
             yum install -y wget
             wget ${{ env.RHEL8_NVIDIA_REPO }} -O /etc/yum.repos.d/cuda.repo
