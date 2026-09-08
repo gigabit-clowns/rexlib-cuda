@@ -1,8 +1,22 @@
 name: Build and Test
 
 on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - .github/workflows/deploy.yml
+      - .github/workflows/release.yml
+      - .gitignore
+      - .vscode/**
+      - LICENSE
+      - pyproject.toml
+      - renovate.json
+      - scripts/**
+
   pull_request:
-  
+
   workflow_dispatch:
 
 jobs:
