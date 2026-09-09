@@ -17,7 +17,6 @@ on:
       - LICENSE
       - renovate.json
       - sonar-project.properties
-      - tests/**
 
   pull_request:
     branches:
