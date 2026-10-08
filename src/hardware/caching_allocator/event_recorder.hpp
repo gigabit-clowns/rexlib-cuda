@@ -20,8 +20,7 @@ class queue_handle;
  * it is deliberately the whole of what they can ask for.
  *
  * Points are handed out as tickets, which must be given back with
- * @ref release once the caller is done with them. @ref event_ticket does that
- * automatically and is what callers should hold.
+ * @ref release once the caller is done with them.
  *
  * Implementations recycle the underlying primitives, so a released ticket may
  * be handed out again by a later @ref record.

@@ -6,9 +6,8 @@
 #include "memory_block.hpp"
 #include "memory_block_allocator.hpp"
 
-#include "../command_queue.hpp"
-
 #include <rexlib/core/hardware/command_token.hpp>
+#include <rexlib/core/span.hpp>
 
 #include <stdexcept>
 #include <utility>
@@ -50,47 +49,50 @@ std::size_t caching_memory_allocator::get_max_alignment() const noexcept
 std::shared_ptr<rexlib::buffer> caching_memory_allocator::allocate(
 	std::size_t size,
 	std::size_t alignment,
-	rexlib::command_queue *queue_hint,
+	rexlib::command_queue* /*queue_hint*/,
 	command_token &pending
 )
 {
-	pending = command_token();
-
-	queue_handle queue;
-	if (queue_hint)
-	{
-		queue = queue_handle(command_queue::cast(*queue_hint));
-	}
-
-	return allocate(
-		size,
-		alignment,
-		queue
-	);
+	return allocate_for_timeline(size, alignment, nullptr, pending);
 }
 
-std::shared_ptr<rexlib::buffer> caching_memory_allocator::allocate(
+std::shared_ptr<rexlib::buffer>
+caching_memory_allocator::allocate_for_timeline(
 	std::size_t size,
 	std::size_t alignment,
-	const queue_handle &queue
+	const command_timeline *timeline,
+	command_token &pending
 )
 {
-	auto &block = m_allocator->allocate(size, alignment, queue);
+	auto &block = m_allocator->allocate(size, alignment, timeline);
 	try
 	{
+		// A command that has finished leaves nothing to wait for. Asked
+		// before the buffer exists, so that failing to ask leaves the block
+		// with a single owner to give it back.
+		if (block.get_pending().is_complete())
+		{
+			block.set_pending(command_token());
+		}
+
 		// The host pointer is its own rather than the device one, since the
 		// two only happen to coincide where the addresses are unified.
-		return std::make_shared<buffer>(
+		auto result = std::make_shared<buffer>(
 			m_allocator,
 			block,
 			*m_resource,
 			m_allocator->is_host_accessible() ? block.get_data() : nullptr
 		);
+
+		pending = block.get_pending();
+		return result;
 	}
 	catch (...)
 	{
-		// Nothing owns the block yet, so nothing would ever give it back.
-		m_allocator->recycle(block, span<const queue_handle>());
+		// Nothing owns the block yet, so nothing would ever give it back. It
+		// goes back carrying what it came with.
+		const auto token = block.get_pending();
+		m_allocator->recycle(block, make_span(&token, 1));
 		throw;
 	}
 }
