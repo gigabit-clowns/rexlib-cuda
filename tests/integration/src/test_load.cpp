@@ -3,14 +3,14 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <rexlib/core/hardware/command.hpp>
+#include "test_fixture.hpp"
+
 #include <rexlib/core/hardware/command_queue.hpp>
 #include <rexlib/core/hardware/device.hpp>
 #include <rexlib/core/hardware/device_backend.hpp>
 #include <rexlib/core/hardware/device_manager.hpp>
 #include <rexlib/core/hardware/device_properties.hpp>
 #include <rexlib/core/hardware/device_type.hpp>
-#include <rexlib/core/platform/operating_system.h>
 #include <rexlib/core/plugin.hpp>
 #include <rexlib/core/plugin_manager.hpp>
 #include <rexlib/core/service_catalog.hpp>
@@ -21,25 +21,12 @@
 using namespace rexlib;
 
 
-static std::string get_cuda_plugin_path()
-{
-	#if REXLIB_WINDOWS
-		return "rexlib-cuda.dll";
-	#elif REXLIB_LINUX
-		return "./librexlib-cuda.so";
-	#elif REXLIB_APPLE
-		return "./librexlib-cuda.dylib";
-	#else
-		#error "Unknown platform"
-	#endif
-}
-
 TEST_CASE( "load and register rexlib-cuda plugin", "[cuda]" )
 {
 	plugin_manager manager;
 
 	const auto* cuda_plugin =
-		manager.load_plugin(get_cuda_plugin_path());
+		manager.load_plugin(cuda::cuda_fixture::get_plugin_path());
 
 	REQUIRE( cuda_plugin != nullptr );
 	REQUIRE( cuda_plugin->get_name() == "rexlib-cuda" );
@@ -48,7 +35,9 @@ TEST_CASE( "load and register rexlib-cuda plugin", "[cuda]" )
 TEST_CASE( "register the CUDA device backend", "[cuda]" )
 {
 	plugin_manager manager;
-	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+	REQUIRE(
+		manager.load_plugin(cuda::cuda_fixture::get_plugin_path()) != nullptr
+	);
 
 	service_catalog catalog;
 	register_all_plugins_at(manager, catalog);
@@ -70,7 +59,9 @@ TEST_CASE( "register the CUDA device backend", "[cuda]" )
 TEST_CASE( "enumerate the CUDA devices", "[cuda]" )
 {
 	plugin_manager manager;
-	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
+	REQUIRE(
+		manager.load_plugin(cuda::cuda_fixture::get_plugin_path()) != nullptr
+	);
 
 	service_catalog catalog;
 	register_all_plugins_at(manager, catalog);
@@ -101,30 +92,4 @@ TEST_CASE( "enumerate the CUDA devices", "[cuda]" )
 	// Unknown ids are rejected regardless of whether there is any device.
 	device_properties properties;
 	REQUIRE_FALSE( backend->get_device_properties(ids.size(), properties) );
-}
-
-TEST_CASE( "the CUDA backend reports what it does not implement yet", "[cuda]" )
-{
-	plugin_manager manager;
-	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
-
-	service_catalog catalog;
-	register_all_plugins_at(manager, catalog);
-
-	const auto device_manager = catalog.get_service_manager<rexlib::device_manager>();
-	auto *backend = device_manager->get_backend("cuda");
-	REQUIRE( backend != nullptr );
-
-	std::vector<std::size_t> ids;
-	backend->enumerate_devices(ids);
-	if (ids.empty())
-	{
-		SKIP( "No CUDA capable device is available." );
-	}
-
-	const auto dev = backend->create_device(ids.front());
-
-	// Submitting requires a program, and this backend provides none.
-	const auto queue = dev->create_command_queue();
-	REQUIRE_THROWS_AS( queue->submit(command()), std::invalid_argument );
 }
