@@ -4,20 +4,27 @@
 
 #include "device_guard.hpp"
 #include "error.hpp"
+#include "event_recorder.hpp"
+#include "stream_timeline.hpp"
 
 #include <rexlib/core/exceptions/invalid_operation_error.hpp>
 #include <rexlib/core/hardware/command.hpp>
 #include <rexlib/core/hardware/command_token.hpp>
 
 #include <stdexcept>
+#include <utility>
 
 namespace rexlib
 {
 namespace cuda
 {
 
-command_queue::command_queue(int ordinal)
-	: m_stream(nullptr)
+command_queue::command_queue(
+	int ordinal,
+	std::shared_ptr<event_recorder> recorder
+)
+	: m_timeline(std::make_shared<stream_timeline>(std::move(recorder)))
+	, m_stream(nullptr)
 	, m_ordinal(ordinal)
 {
 	// Non-blocking, so that queues are only ever ordered against each other
@@ -43,6 +50,12 @@ command_queue::handle command_queue::get_handle() const noexcept
 int command_queue::get_ordinal() const noexcept
 {
 	return m_ordinal;
+}
+
+const std::shared_ptr<stream_timeline>&
+command_queue::get_timeline() const noexcept
+{
+	return m_timeline;
 }
 
 void command_queue::synchronize() const

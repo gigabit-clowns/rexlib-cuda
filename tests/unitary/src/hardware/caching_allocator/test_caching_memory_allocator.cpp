@@ -5,9 +5,14 @@
 #include <hardware/caching_allocator/caching_memory_allocator.hpp>
 
 #include <hardware/caching_allocator/buffer.hpp>
+#include <hardware/command_queue.hpp>
+#include <hardware/pooled_event_recorder.hpp>
+#include <hardware/stream_timeline.hpp>
 
 #include "../mock/mock_command_queue.hpp"
 #include "../mock/mock_command_timeline.hpp"
+#include "../test_driver.hpp"
+#include "../test_stream_blocker.hpp"
 #include "mock/mock_memory_resource.hpp"
 #include "test_caching_allocator.hpp"
 
@@ -266,6 +271,57 @@ TEST_CASE(
 
 	CHECK( cuda::buffer::cast(*buf).get_device_ptr() == second_data );
 	CHECK( pending.get_timeline() == second );
+}
+
+TEST_CASE(
+	"a caching_memory_allocator should prefer the memory the hinted queue "
+	"can use at no cost",
+	"[caching_memory_allocator]"
+)
+{
+	if (!cuda::has_test_device())
+	{
+		SKIP( "No CUDA capable device is available." );
+	}
+
+	cuda::caching_allocator_fixture fixture;
+	auto &allocator = fixture.get();
+	const auto &other = fixture.get_blocks().get_timeline(0);
+
+	cuda::command_queue queue(
+		0,
+		std::make_shared<cuda::pooled_event_recorder>(0)
+	);
+
+	// Declared after the allocator, so that the stream is let go before the
+	// allocator waits for it on its way out.
+	cuda::stream_blocker blocker(queue.get_handle());
+	const command_token own(
+		queue.get_timeline(),
+		queue.get_timeline()->record(queue.get_handle())
+	);
+
+	// Two halves of one heap, one dropped while a command of the queue still
+	// uses it and the other while a command of another timeline does.
+	void *own_data = nullptr;
+	{
+		command_token pending;
+		auto other_buffer =
+			allocator.allocate(min_heap / 2, alignment, nullptr, pending);
+		auto own_buffer =
+			allocator.allocate(min_heap / 2, alignment, nullptr, pending);
+
+		own_data = cuda::buffer::cast(*own_buffer).get_device_ptr();
+		cuda::buffer::cast(*other_buffer).record_use(command_token(other, 1));
+		cuda::buffer::cast(*own_buffer).record_use(own);
+	}
+
+	command_token pending;
+	auto buf = allocator.allocate(min_heap / 2, alignment, &queue, pending);
+
+	CHECK( cuda::buffer::cast(*buf).get_device_ptr() == own_data );
+	CHECK( pending.get_timeline() == queue.get_timeline() );
+	CHECK( pending.get_id() == own.get_id() );
 }
 
 TEST_CASE(

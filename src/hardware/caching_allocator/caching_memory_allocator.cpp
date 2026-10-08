@@ -6,6 +6,9 @@
 #include "memory_block.hpp"
 #include "memory_block_allocator.hpp"
 
+#include "../command_queue.hpp"
+#include "../stream_timeline.hpp"
+
 #include <rexlib/core/hardware/command_token.hpp>
 #include <rexlib/core/span.hpp>
 
@@ -49,11 +52,19 @@ std::size_t caching_memory_allocator::get_max_alignment() const noexcept
 std::shared_ptr<rexlib::buffer> caching_memory_allocator::allocate(
 	std::size_t size,
 	std::size_t alignment,
-	rexlib::command_queue* /*queue_hint*/,
+	rexlib::command_queue *queue_hint,
 	command_token &pending
 )
 {
-	return allocate_for_timeline(size, alignment, nullptr, pending);
+	// A queue of another backend has no memory here that it could use at no
+	// cost, so it is as good as no hint.
+	const auto *queue = dynamic_cast<const command_queue*>(queue_hint);
+	return allocate_for_timeline(
+		size,
+		alignment,
+		queue ? queue->get_timeline().get() : nullptr,
+		pending
+	);
 }
 
 std::shared_ptr<rexlib::buffer>
