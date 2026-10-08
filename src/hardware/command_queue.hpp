@@ -22,6 +22,14 @@ class stream_timeline;
  *
  * The queue owns the stream. Its @ref stream_timeline is shared with the
  * tokens of its commands, and outlives it.
+ *
+ * A command runs @ref stream_program objects only. Its buffers can be of any
+ * kind: a buffer this backend did not allocate has nobody to keep its memory
+ * until the work ends, so a command that holds one is finished before
+ * @ref submit returns.
+ *
+ * Thread safe. Commands submitted at the same time may each end up waiting
+ * for what the other depends on.
  */
 class command_queue final
 	: public rexlib::command_queue
@@ -93,6 +101,9 @@ private:
 	std::shared_ptr<stream_timeline> m_timeline;
 	handle m_stream;
 	int m_ordinal;
+
+	void wait_for(const command_token &dependency) const;
+	command_token track(const command &cmd) const;
 };
 
 } // namespace cuda

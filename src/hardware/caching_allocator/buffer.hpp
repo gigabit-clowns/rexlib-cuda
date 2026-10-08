@@ -99,11 +99,14 @@ public:
 	 * @p token must finish its commands in the order of their ids. An empty
 	 * token is ignored.
 	 *
+	 * A command that only reads the buffer uses it as well, so this can be
+	 * called on a buffer that cannot be written.
+	 *
 	 * Thread safe.
 	 *
 	 * @param token The token of the command.
 	 */
-	void record_use(const command_token &token);
+	void record_use(const command_token &token) const;
 
 	/**
 	 * @brief Get the commands that were recorded as using this buffer.
@@ -148,8 +151,8 @@ private:
 	memory_block *m_block;
 	const memory_resource *m_resource;
 	void *m_host_data;
-	std::mutex m_mutex;
-	token_vector_type m_uses;
+	mutable std::mutex m_mutex;
+	mutable token_vector_type m_uses;
 };
 
 } // namespace cuda

@@ -76,7 +76,7 @@ const void* buffer::get_device_ptr() const noexcept
 	return m_block->get_data();
 }
 
-void buffer::record_use(const command_token &token)
+void buffer::record_use(const command_token &token) const
 {
 	if (token.is_empty())
 	{
