@@ -39,9 +39,7 @@ public:
 	 */
 	void synchronize() const;
 
-	void submit(const command &cmd) override;
-	void signal(rexlib::event &ev) override;
-	void wait(const rexlib::event &ev) override;
+	command_token submit(command cmd) override;
 
 	/**
 	 * @brief Downcast a queue to this backend's implementation.

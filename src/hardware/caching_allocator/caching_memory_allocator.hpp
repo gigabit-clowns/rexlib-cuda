@@ -62,7 +62,8 @@ public:
 	std::shared_ptr<rexlib::buffer> allocate(
 		std::size_t size,
 		std::size_t alignment,
-		rexlib::command_queue *queue_hint = nullptr
+		rexlib::command_queue *queue_hint,
+		command_token &pending
 	) override;
 
 	/**

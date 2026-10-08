@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <rexlib/core/hardware/buffer.hpp>
+#include <rexlib/core/hardware/command_token.hpp>
 #include <rexlib/core/hardware/device.hpp>
 #include <rexlib/core/hardware/device_backend.hpp>
 #include <rexlib/core/hardware/device_manager.hpp>
@@ -152,6 +153,7 @@ TEST_CASE(
 
 	const std::size_t size = 4096;
 	const std::size_t alignment = 256;
+	command_token pending;
 
 	SECTION( "device local memory the host cannot address" )
 	{
@@ -159,7 +161,7 @@ TEST_CASE(
 			fixture.create_allocator(memory_resource_affinity::device);
 		REQUIRE( allocator != nullptr );
 
-		auto buf = allocator->allocate(size, alignment);
+		auto buf = allocator->allocate(size, alignment, nullptr, pending);
 		REQUIRE( buf != nullptr );
 		CHECK( buf->get_size() >= size );
 
@@ -174,7 +176,7 @@ TEST_CASE(
 			fixture.create_allocator(memory_resource_affinity::host);
 		REQUIRE( allocator != nullptr );
 
-		auto buf = allocator->allocate(size, alignment);
+		auto buf = allocator->allocate(size, alignment, nullptr, pending);
 		REQUIRE( buf != nullptr );
 		CHECK( buf->get_size() >= size );
 
@@ -212,15 +214,16 @@ TEST_CASE(
 
 	const std::size_t size = 4096;
 	const std::size_t alignment = 256;
+	command_token pending;
 
 	void *first = nullptr;
 	{
-		auto buf = allocator->allocate(size, alignment);
+		auto buf = allocator->allocate(size, alignment, nullptr, pending);
 		first = buf->get_host_ptr();
 	}
 
 	// Caching is the whole point: the second request never reaches the driver.
-	auto second = allocator->allocate(size, alignment);
+	auto second = allocator->allocate(size, alignment, nullptr, pending);
 	CHECK( second->get_host_ptr() == first );
 }
 
@@ -249,5 +252,8 @@ TEST_CASE(
 		)
 	);
 
-	CHECK_THROWS( allocator->allocate(1024, 2 * max_alignment) );
+	command_token pending;
+	CHECK_THROWS(
+		allocator->allocate(1024, 2 * max_alignment, nullptr, pending)
+	);
 }

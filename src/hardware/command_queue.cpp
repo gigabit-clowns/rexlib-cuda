@@ -4,10 +4,10 @@
 
 #include "device_guard.hpp"
 #include "error.hpp"
-#include "event.hpp"
 
 #include <rexlib/core/exceptions/invalid_operation_error.hpp>
 #include <rexlib/core/hardware/command.hpp>
+#include <rexlib/core/hardware/command_token.hpp>
 
 #include <stdexcept>
 
@@ -50,7 +50,7 @@ void command_queue::synchronize() const
 	REXLIB_CUDA_CHECK( cudaStreamSynchronize(m_stream) );
 }
 
-void command_queue::submit(const command &cmd)
+command_token command_queue::submit(command cmd)
 {
 	if (!cmd.get_program())
 	{
@@ -62,26 +62,6 @@ void command_queue::submit(const command &cmd)
 
 	throw invalid_operation_error(
 		"The CUDA backend does not implement any program yet."
-	);
-}
-
-void command_queue::signal(rexlib::event &ev)
-{
-	auto &cuda_event = event::cast(ev);
-	REXLIB_CUDA_CHECK(
-		cudaEventRecord(cuda_event.get_handle(), m_stream)
-	);
-}
-
-void command_queue::wait(const rexlib::event &ev)
-{
-	const auto &cuda_event = event::cast(ev);
-	REXLIB_CUDA_CHECK(
-		cudaStreamWaitEvent(
-			m_stream,
-			cuda_event.get_handle(),
-			cudaEventWaitDefault
-		)
 	);
 }
 

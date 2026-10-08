@@ -8,6 +8,8 @@
 
 #include "../command_queue.hpp"
 
+#include <rexlib/core/hardware/command_token.hpp>
+
 #include <stdexcept>
 #include <utility>
 
@@ -48,9 +50,12 @@ std::size_t caching_memory_allocator::get_max_alignment() const noexcept
 std::shared_ptr<rexlib::buffer> caching_memory_allocator::allocate(
 	std::size_t size,
 	std::size_t alignment,
-	rexlib::command_queue *queue_hint
+	rexlib::command_queue *queue_hint,
+	command_token &pending
 )
 {
+	pending = command_token();
+
 	queue_handle queue;
 	if (queue_hint)
 	{

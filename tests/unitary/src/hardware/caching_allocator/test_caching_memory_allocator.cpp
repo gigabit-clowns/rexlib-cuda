@@ -6,6 +6,7 @@
 
 #include <hardware/caching_allocator/buffer.hpp>
 
+#include "../mock/mock_command_queue.hpp"
 #include "mock/mock_memory_resource.hpp"
 #include "test_caching_allocator.hpp"
 #include "test_queue.hpp"
@@ -13,7 +14,7 @@
 #include <config.hpp>
 
 #include <rexlib/core/hardware/buffer.hpp>
-#include <rexlib/core/hardware/command_queue.hpp>
+#include <rexlib/core/hardware/command_token.hpp>
 #include <rexlib/core/memory/align.hpp>
 
 #include <cstddef>
@@ -79,28 +80,23 @@ TEST_CASE(
 			record(trompeloeil::_)
 		);
 
-		auto buf = fixture.get().allocate(1024, alignment, nullptr);
+		command_token pending;
+		auto buf = fixture.get().allocate(1024, alignment, nullptr, pending);
 		REQUIRE( buf != nullptr );
 
-		auto other = fixture.get().allocate(1024, alignment, nullptr);
+		auto other =
+			fixture.get().allocate(1024, alignment, nullptr, pending);
 		REQUIRE( other != nullptr );
 	}
 
 	SECTION( "and refusing a queue this backend did not make" )
 	{
-		class foreign_queue final : public rexlib::command_queue
-		{
-		public:
-			void submit(const rexlib::command&) override {}
-			void signal(rexlib::event&) override {}
-			void wait(const rexlib::event&) override {}
-		};
-
 		// There is no stream behind it, so there is nothing to order the
 		// buffer against and nothing to record a point on.
-		foreign_queue queue;
+		cuda::mock_command_queue queue;
+		command_token pending;
 		CHECK_THROWS_AS(
-			fixture.get().allocate(1024, alignment, &queue),
+			fixture.get().allocate(1024, alignment, &queue, pending),
 			std::invalid_argument
 		);
 	}

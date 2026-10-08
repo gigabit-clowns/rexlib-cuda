@@ -10,7 +10,6 @@
 #include <rexlib/core/hardware/device_manager.hpp>
 #include <rexlib/core/hardware/device_properties.hpp>
 #include <rexlib/core/hardware/device_type.hpp>
-#include <rexlib/core/hardware/event.hpp>
 #include <rexlib/core/platform/operating_system.h>
 #include <rexlib/core/plugin.hpp>
 #include <rexlib/core/plugin_manager.hpp>
@@ -102,61 +101,6 @@ TEST_CASE( "enumerate the CUDA devices", "[cuda]" )
 	// Unknown ids are rejected regardless of whether there is any device.
 	device_properties properties;
 	REQUIRE_FALSE( backend->get_device_properties(ids.size(), properties) );
-}
-
-TEST_CASE( "synchronize a CUDA queue through an event", "[cuda]" )
-{
-	plugin_manager manager;
-	REQUIRE( manager.load_plugin(get_cuda_plugin_path()) != nullptr );
-
-	service_catalog catalog;
-	register_all_plugins_at(manager, catalog);
-
-	const auto device_manager = catalog.get_service_manager<rexlib::device_manager>();
-	auto *backend = device_manager->get_backend("cuda");
-	REQUIRE( backend != nullptr );
-
-	std::vector<std::size_t> ids;
-	backend->enumerate_devices(ids);
-	if (ids.empty())
-	{
-		SKIP( "No CUDA capable device is available." );
-	}
-
-	const auto dev = backend->create_device(ids.front());
-	REQUIRE( dev != nullptr );
-
-	const auto queue = dev->create_command_queue();
-	REQUIRE( queue != nullptr );
-
-	const auto ev = dev->create_event(event_usage_flag_bits::host_wait);
-	REQUIRE( ev != nullptr );
-
-	// An event that has never been recorded starts out signaled.
-	REQUIRE( ev->is_signaled() );
-	REQUIRE_NOTHROW( ev->wait() );
-
-	// Recording on an idle queue completes right away, and the queue can be
-	// made to wait on the event it just signaled.
-	REQUIRE_NOTHROW( queue->signal(*ev) );
-	REQUIRE_NOTHROW( ev->wait() );
-	REQUIRE( ev->is_signaled() );
-	REQUIRE_NOTHROW( queue->wait(*ev) );
-
-	// Queues reject events that this backend did not create.
-	class foreign_event final : public rexlib::event
-	{
-	public:
-		event_usage_flags get_supported_usage() const noexcept override
-		{
-			return {};
-		}
-		void wait() const override {}
-		bool is_signaled() const override { return true; }
-	};
-
-	foreign_event other;
-	REQUIRE_THROWS_AS( queue->signal(other), std::invalid_argument );
 }
 
 TEST_CASE( "the CUDA backend reports what it does not implement yet", "[cuda]" )
