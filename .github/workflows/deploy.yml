@@ -88,18 +88,33 @@ jobs:
           variant: host
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@e090b81e30c4d855ea63bf4b6e59204c09a101ae # v4.2.1
+        uses: pypa/cibuildwheel@adba99c781d3746d38b3a09b1cf797965bcb7fe6 # v4.3.0
         env:
           CIBW_ARCHS: ${{ matrix.platform.architecture }}
           CIBW_BUILD: "cp313-manylinux*" # Python agnostic, pick any version
           CIBW_BUILD_VERBOSITY: 1
           # Based on: https://stackoverflow.com/a/77212119
+          # ccache comes from EPEL, whose mirrors fail now and then: it gets
+          # three attempts, and without it a ccache that only runs the
+          # compiler it is given stands in, so the wheel builds uncached. The
+          # toolkit needs nothing from EPEL, so it is installed with EPEL left
+          # out.
           CIBW_BEFORE_ALL: |
-            yum install -y wget
-            command -v ccache || dnf install -y ccache || yum install -y ccache
-            wget ${{ env.RHEL8_NVIDIA_REPO }} -O /etc/yum.repos.d/cuda.repo
+            set -e
+            for attempt in 1 2 3; do
+              command -v ccache > /dev/null && break
+              dnf install -y ccache || yum install -y ccache || sleep 5
+            done
+            if ! command -v ccache > /dev/null; then
+              echo "::warning::ccache could not be installed from EPEL; building without a compiler cache"
+              printf '#!/bin/sh\nexec "$@"\n' > /usr/local/bin/ccache
+              chmod +x /usr/local/bin/ccache
+            fi
+            curl -fsSL --retry 3 --retry-delay 5 \
+              ${{ env.RHEL8_NVIDIA_REPO }} -o /etc/yum.repos.d/cuda.repo
             yum clean all
-            yum -y install cuda-toolkit-${{ matrix.cuda-major.package }}
+            yum -y --disablerepo=epel install \
+              cuda-toolkit-${{ matrix.cuda-major.package }}
             python -m pip install "cmake>=3.23" ninja
             export CMAKE_GENERATOR=Ninja
             export CCACHE_DIR=/host/tmp/ccache CCACHE_BASEDIR=/ \
@@ -151,7 +166,7 @@ jobs:
         uses: gigabit-clowns/.github/.github/composites/save-fetched@main
 
       - name: Upload wheels
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: cibw-wheels-manylinux-${{ matrix.platform.architecture }}-cuda${{ matrix.cuda-major.version }}
           path: ./wheelhouse/*.whl
@@ -162,7 +177,7 @@ jobs:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: cibw-*
           path: dist
@@ -189,7 +204,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Download artifacs
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: "cibw-*"
           path: dist
