@@ -114,6 +114,9 @@
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true
+      },
+      "environment": {
+        "TSAN_OPTIONS": "suppressions=${sourceDir}/tests/tsan.supp"
       }
     }
   ]

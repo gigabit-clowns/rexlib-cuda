@@ -48,7 +48,11 @@ With CMake 3.21 or newer the presets do the same: `cmake --preset debug`,
 behaviour sanitizers) and `sanitize-thread` presets too; the two sanitizer
 presets are not offered on Windows. The `sanitize` test preset sets
 `ASAN_OPTIONS=protect_shadow_gap=0`, without which the address sanitizer and
-the CUDA runtime fight over the same memory. What only one machine has, such
+the CUDA runtime fight over the same memory. The `sanitize-thread` one points
+`TSAN_OPTIONS` at `tests/tsan.supp`, which leaves out the lock cycles that go
+through trompeloeil's own lock: a mocked call holds it through its actions,
+and a case that calls back into the code under test from one takes that
+code's lock under it. What only one machine has, such
 as `rexlib_ROOT`, the CUDA paths or a compiler cache, goes in a
 `CMakeUserPresets.json`, which git ignores.
 
