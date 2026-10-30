@@ -18,9 +18,7 @@ target_link_libraries(
 	INTERFACE
 		rexlib::rexlib
 		CUDA::cudart
-		Boost::container
-		Boost::intrusive
-		Boost::unordered
+		Boost::headers # Container, Intrusive and Unordered
 		spdlog::spdlog
 )
 

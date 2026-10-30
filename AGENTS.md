@@ -21,7 +21,7 @@ the same pull request that causes it.
 | `src/config.hpp` | Every tunable of the backend, as a macro the build may override |
 | `src/logger.hpp` | The `REXLIB_CUDA_LOG_*` macros over spdlog |
 | `tests/unitary/`, `tests/integration/` | Catch2 suites, with trompeloeil for mocks |
-| `cmake/modules/` | `fetch_boost`, `fetch_spdlog` and `cuda_architectures` |
+| `cmake/modules/` | One `rexlib_cuda_fetch_*.cmake` per dependency, and `cuda_architectures` |
 | `scripts/select_cuda_major.py` | Rewrites `pyproject.toml` for one CUDA major before a wheel is built |
 | `external/rexlib` | The rexlib this plugin is developed against, a submodule |
 
@@ -79,11 +79,31 @@ a plugin goes and the RPATH back to the library.
 
 ## Dependencies
 
-Boost (container, intrusive, unordered) and spdlog are fetched and built as
-static libraries, through `cmake/modules/fetch_*.cmake`; their versions are
-literals in `CMakeLists.txt`. Catch2 and trompeloeil, for the tests, are
-fetched by URL in `tests/CMakeLists.txt`. Renovate follows all four through
-custom managers in `renovate.json`.
+Every dependency but rexlib and the CUDA Toolkit is fetched and built with
+the plugin by default, static and position independent: Boost (Container,
+Intrusive and Unordered, linked as `Boost::headers`) and spdlog, and for the
+tests Catch2 and trompeloeil. Turning `REXLIB_CUDA_BUILD_DEPENDENCIES` off
+finds them all installed instead, with `find_package`. Turning off
+`REXLIB_CUDA_BUILD_<DEP>` (`BOOST`, `SPDLOG`, `CATCH2`, `TROMPELOEIL`) does
+that for one of them. `cmake_dependent_option` declares those toggles, so
+that the global one forces the others off.
+
+A dependency is a branch where it is used, in `CMakeLists.txt` for the
+plugin and in `tests/CMakeLists.txt` for the tests. Built, it is a call to
+`rexlib_cuda_fetch_<dep>()` with what pins the release it fetches. Found, it
+is the `find_package` call, with the oldest version that works. Each
+`rexlib_cuda_fetch_<dep>()` has a module of its own in `cmake/modules/`,
+reads nothing but its arguments, and sets the options of the project it
+fetches in its own scope. A new dependency gets a toggle, a branch, a module
+and a manager in `renovate.json`.
+
+Those calls hold the only pins, in forms Renovate keeps up to date. What is
+released on GitHub is pinned by the commit of its release tag,
+`COMMIT <sha>) # <tag>`, as the actions of the workflows are. Boost is
+pinned by its tag and the SHA256 of the archive it attaches to the release,
+since the archive of a commit lacks its libraries, which are submodules.
+Renovate bumps the versions, not the hashes, so a bump of Boost fails to
+configure until the hash CMake reports is pasted in.
 
 The `cuda-toolkit` requirement in `pyproject.toml` is not a version this
 project follows: it is a placeholder `select_cuda_major.py` rewrites for each
