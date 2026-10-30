@@ -42,6 +42,16 @@ cmake -S . -B build/cuda -Drexlib_ROOT=build/rexlib-install
 cmake --build build/cuda --parallel
 ```
 
+With CMake 3.21 or newer the presets do the same: `cmake --preset debug`,
+`cmake --build --preset debug`, `ctest --preset debug`, which build into
+`build/debug`. There are `release`, `sanitize` (the address and undefined
+behaviour sanitizers) and `sanitize-thread` presets too; the two sanitizer
+presets are not offered on Windows. The `sanitize` test preset sets
+`ASAN_OPTIONS=protect_shadow_gap=0`, without which the address sanitizer and
+the CUDA runtime fight over the same memory. What only one machine has, such
+as `rexlib_ROOT`, the CUDA paths or a compiler cache, goes in a
+`CMakeUserPresets.json`, which git ignores.
+
 A CUDA toolkit of 11 or newer is required. Unless `CMAKE_CUDA_ARCHITECTURES`
 is set, `rexlib_cuda_all_major_architectures` asks nvcc which architectures it
 supports and keeps the oldest of each major family as SASS, plus the PTX of
