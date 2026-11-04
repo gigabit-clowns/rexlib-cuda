@@ -39,12 +39,16 @@ jobs:
         - {cc: gcc, cxx: g++}
         - {cc: clang, cxx: clang++}
         cuda:
-        - 12.8.1
+        - 13.3.1
         
         build_type:
         - Debug
         
         include:
+        - os: ubuntu-24.04
+          compiler: {cc: gcc, cxx: g++}
+          cuda: 12.8.1
+          build_type: Debug
         - os: ubuntu-22.04
           compiler: {cc: gcc, cxx: g++}
           cuda: 11.8.0
