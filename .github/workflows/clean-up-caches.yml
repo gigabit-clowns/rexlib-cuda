@@ -6,8 +6,11 @@ on:
   workflow_run:
     workflows:
       - Build and Test
+      - Deploy release
     types:
       - completed
+    branches:
+      - main
 
   workflow_dispatch:
     inputs:
@@ -35,6 +38,17 @@ jobs:
     uses: gigabit-clowns/.github/.github/workflows/clean-up-caches.yml@main
     with:
       scope: superseded
+      patterns: &patterns |
+        ccache-ubuntu-latest-g++-*
+        ccache-ubuntu-latest-clang++-*
+        ccache-ubuntu-24.04-g++-*
+        ccache-ubuntu-22.04-g++-*
+        ccache-windows-latest-cl-*
+        wheels-x86_64-*
+        wheels-aarch64-*
+        fetched-host-Linux-*
+        fetched-Linux-*
+        fetched-Windows-*
 
   on_request:
     permissions:
@@ -45,3 +59,4 @@ jobs:
     with:
       scope: ${{ inputs.scope }}
       ref: ${{ inputs.ref != '' && inputs.ref || github.ref_name }}
+      patterns: *patterns
