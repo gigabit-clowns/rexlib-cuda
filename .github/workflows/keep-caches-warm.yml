@@ -22,10 +22,11 @@ jobs:
     with:
       entries: >-
         [
-          {"os": "ubuntu-latest", "prefix": "ccache-ubuntu-latest-g++-12.8.1"},
-          {"os": "ubuntu-latest", "prefix": "ccache-ubuntu-latest-clang++-12.8.1"},
-          {"os": "ubuntu-22.04", "prefix": "ccache-ubuntu-22.04-g++-11.8.0"},
-          {"os": "windows-latest", "prefix": "ccache-windows-latest-cl-13.3.1"},
+          {"os": "ubuntu-latest", "prefix": "ccache-ubuntu-latest-g++"},
+          {"os": "ubuntu-latest", "prefix": "ccache-ubuntu-latest-clang++"},
+          {"os": "ubuntu-24.04", "prefix": "ccache-ubuntu-24.04-g++"},
+          {"os": "ubuntu-22.04", "prefix": "ccache-ubuntu-22.04-g++"},
+          {"os": "windows-latest", "prefix": "ccache-windows-latest-cl"},
           {"os": "ubuntu-latest", "prefix": "wheels-x86_64", "path": "/tmp/ccache"},
           {"os": "ubuntu-latest", "prefix": "wheels-aarch64", "path": "/tmp/ccache"},
           {"os": "ubuntu-latest", "prefix": "fetched-host-Linux", "path": "/tmp/fetched\n!/tmp/fetched/*-build"},

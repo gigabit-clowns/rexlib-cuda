@@ -36,11 +36,13 @@ changes, and so on.
 | `release.yml` | Tags and releases, through the shared workflow of the organisation |
 | `clean-up-caches.yml`, `keep-caches-warm.yml` | Manage the Actions cache |
 
-`build-and-test.yml` covers Ubuntu with gcc and clang on CUDA 12, Ubuntu 22.04
-with CUDA 11 and Windows with CUDA 13, in Debug. It builds rexlib from the
+`build-and-test.yml` covers Ubuntu with gcc and clang on CUDA 13, Ubuntu 24.04
+with CUDA 12, Ubuntu 22.04 with CUDA 11 and Windows with CUDA 13, in Debug. It builds rexlib from the
 submodule into a prefix first, which is most of the wall clock and what the
 compiler cache is for. The cache and the fetched sources are saved only on
-`main`. The compilation database of the gcc build is what the scan reads.
+`main`. `clean-up-caches.yml` names every cache family, `*` for what varies,
+so a new one is added there and, without its CUDA version, to
+`keep-caches-warm.yml`. The compilation database of the gcc build is what the scan reads.
 
 Publishing to PyPI is wired up but disabled. Every push to `main` updates the
 `development` pre-release with its wheels.
